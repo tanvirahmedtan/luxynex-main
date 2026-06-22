@@ -1,0 +1,18 @@
+{
+  "name": "Luxynex - Premium Gadgets & Perfumes",
+  "short_name": "Luxynex",
+  "description": "Shop premium gadgets, attar, and perfumes online at Luxynex with fast delivery across Bangladesh.",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#f97316",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "orientation": "portrait-primary"
+}

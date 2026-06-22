@@ -1,0 +1,97 @@
+CREATE OR REPLACE FUNCTION public.place_order(
+  p_customer_name text,
+  p_customer_phone text,
+  p_customer_email text,
+  p_shipping_address text,
+  p_items jsonb,
+  p_shipping_fee numeric,
+  p_promo_discount_percent numeric,
+  p_payment_method text,
+  p_notes text
+) RETURNS TABLE(id uuid, order_number text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  item jsonb;
+  pid uuid;
+  qty int;
+  prod record;
+  unit_price numeric;
+  v_subtotal numeric := 0;
+  v_discount numeric := 0;
+  v_total numeric := 0;
+  v_items jsonb := '[]'::jsonb;
+  v_order_number text;
+  v_id uuid;
+BEGIN
+  IF p_customer_name IS NULL OR length(trim(p_customer_name)) = 0 THEN
+    RAISE EXCEPTION 'Customer name required';
+  END IF;
+  IF p_customer_phone !~ '^01[3-9][0-9]{8}$' THEN
+    RAISE EXCEPTION 'Invalid Bangladeshi phone';
+  END IF;
+  IF p_customer_email IS NOT NULL AND length(p_customer_email) > 0
+     AND p_customer_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' THEN
+    RAISE EXCEPTION 'Invalid email';
+  END IF;
+  IF p_shipping_address IS NULL OR length(trim(p_shipping_address)) < 5 THEN
+    RAISE EXCEPTION 'Shipping address too short';
+  END IF;
+  IF jsonb_array_length(p_items) = 0 THEN
+    RAISE EXCEPTION 'Cart is empty';
+  END IF;
+  IF p_shipping_fee < 0 THEN p_shipping_fee := 0; END IF;
+  IF p_promo_discount_percent < 0 OR p_promo_discount_percent > 100 THEN
+    p_promo_discount_percent := 0;
+  END IF;
+
+  FOR item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
+    pid := NULLIF(item->>'product_id','')::uuid;
+    qty := COALESCE((item->>'quantity')::int, 0);
+    IF pid IS NULL OR qty <= 0 THEN
+      RAISE EXCEPTION 'Invalid cart item';
+    END IF;
+    SELECT id, name, price, sale_price, stock, images
+      INTO prod FROM public.admin_products WHERE id = pid;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Product not found: %', pid;
+    END IF;
+    IF prod.stock < qty THEN
+      RAISE EXCEPTION 'Insufficient stock for %', prod.name;
+    END IF;
+    unit_price := COALESCE(NULLIF(prod.sale_price,0), prod.price);
+    v_subtotal := v_subtotal + (unit_price * qty);
+    v_items := v_items || jsonb_build_array(jsonb_build_object(
+      'product_id', prod.id,
+      'name', prod.name,
+      'price', unit_price,
+      'quantity', qty,
+      'image', COALESCE(prod.images[1], '')
+    ));
+  END LOOP;
+
+  v_discount := round(v_subtotal * p_promo_discount_percent / 100.0);
+  v_total := v_subtotal - v_discount + p_shipping_fee;
+  v_order_number := 'LXV-' || to_char(now(),'YYYYMMDD') || '-' || lpad(floor(random()*100000)::text, 5, '0');
+
+  INSERT INTO public.admin_orders(
+    order_number, customer_name, customer_phone, customer_email,
+    shipping_address, items, subtotal, shipping_fee, discount, total,
+    status, payment_method, payment_status, notes
+  ) VALUES (
+    v_order_number, trim(p_customer_name), p_customer_phone,
+    NULLIF(trim(coalesce(p_customer_email,'')), ''),
+    p_shipping_address, v_items, v_subtotal, p_shipping_fee, v_discount, v_total,
+    'pending'::order_status, p_payment_method::payment_method, 'pending', p_notes
+  ) RETURNING id INTO v_id;
+
+  RETURN QUERY SELECT v_id, v_order_number;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.place_order(text,text,text,text,jsonb,numeric,numeric,text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.place_order(text,text,text,text,jsonb,numeric,numeric,text,text) TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';

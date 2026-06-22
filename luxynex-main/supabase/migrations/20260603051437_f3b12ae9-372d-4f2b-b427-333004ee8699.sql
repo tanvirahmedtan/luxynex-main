@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.sync_order_side_effects() FROM PUBLIC, anon, authenticated;

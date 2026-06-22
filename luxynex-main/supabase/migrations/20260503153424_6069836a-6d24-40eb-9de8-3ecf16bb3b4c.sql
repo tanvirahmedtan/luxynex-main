@@ -1,0 +1,1 @@
+ALTER TABLE public.admin_categories ADD COLUMN IF NOT EXISTS description TEXT;
