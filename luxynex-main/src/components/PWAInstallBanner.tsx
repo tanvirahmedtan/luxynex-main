@@ -60,7 +60,7 @@ export default function PWAInstallBanner() {
   if (!isMobile || !showBanner) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm px-4 py-3">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm px-4 py-3 safe-area-top">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs sm:text-sm font-medium text-gray-800 leading-tight">

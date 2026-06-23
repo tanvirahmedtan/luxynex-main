@@ -65,6 +65,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
         {/* Wishlist */}
         <button
+          type="button"
           onClick={() => {
             if (wishlisted) {
               removeFromWishlist(product.id);
@@ -82,6 +83,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </button>
         {/* Quick Add */}
         <button
+          type="button"
           onClick={() => {
             addToCart(product);
             toast.success(`${product.name} added to cart`);
