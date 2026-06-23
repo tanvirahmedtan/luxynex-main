@@ -20,6 +20,7 @@ type CouponRow = Database["public"]["Tables"]["coupons"]["Row"] & {
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedVariant?: string | null;
 }
 
 export type PromoResult = {
@@ -31,10 +32,11 @@ export type PromoResult = {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, qty?: number) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, qty: number) => void;
+  addToCart: (product: Product, qty?: number, selectedVariant?: string | null) => void;
+  removeFromCart: (productId: string, selectedVariant?: string | null) => void;
+  updateQuantity: (productId: string, qty: number, selectedVariant?: string | null) => void;
   clearCart: () => void;
+  clearCoupon: () => void;
   totalItems: number;
   subtotal: number;
   promoCode: string;
@@ -60,7 +62,10 @@ const isCartItem = (value: unknown): value is CartItem => {
     item.quantity >= 0 &&
     item.product !== null &&
     typeof item.product === "object" &&
-    typeof (item.product as Partial<Product>).id === "string"
+    typeof (item.product as Partial<Product>).id === "string" &&
+    (item.selectedVariant === undefined ||
+      item.selectedVariant === null ||
+      typeof item.selectedVariant === "string")
   );
 };
 
@@ -179,33 +184,67 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [items, promoCode, appliedCoupon, hydrated]);
 
-  const addToCart = useCallback((product: Product, qty = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing)
-        return prev.map((i) =>
-          i.product.id === product.id
-            ? { ...i, quantity: i.quantity + qty }
-            : i,
+  const addToCart = useCallback(
+    (product: Product, qty = 1, selectedVariant?: string | null) => {
+      const normalizedVariant = selectedVariant?.trim() || null;
+      setItems((prev) => {
+        const existingIndex = prev.findIndex(
+          (i) =>
+            i.product.id === product.id &&
+            (i.selectedVariant || null) === normalizedVariant,
         );
-      return [...prev, { product, quantity: qty }];
-    });
-  }, []);
 
-  const removeFromCart = useCallback(
-    (id: string) => setItems((prev) => prev.filter((i) => i.product.id !== id)),
+        if (existingIndex > -1) {
+          return prev.map((item, index) =>
+            index === existingIndex
+              ? { ...item, quantity: item.quantity + qty }
+              : item,
+          );
+        }
+
+        return [
+          ...prev,
+          { product, quantity: qty, selectedVariant: normalizedVariant },
+        ];
+      });
+    },
     [],
   );
-  const updateQuantity = useCallback((id: string, qty: number) => {
-    if (qty < 1) return;
-    setItems((prev) =>
-      prev.map((i) => (i.product.id === id ? { ...i, quantity: qty } : i)),
-    );
-  }, []);
+
+  const removeFromCart = useCallback(
+    (id: string, selectedVariant?: string | null) =>
+      setItems((prev) =>
+        prev.filter(
+          (i) =>
+            i.product.id !== id ||
+            (i.selectedVariant || null) !== (selectedVariant?.trim() || null),
+        ),
+      ),
+    [],
+  );
+  const updateQuantity = useCallback(
+    (id: string, qty: number, selectedVariant?: string | null) => {
+      if (qty < 1) return;
+      const normalizedVariant = selectedVariant?.trim() || null;
+      setItems((prev) =>
+        prev.map((i) =>
+          i.product.id === id && (i.selectedVariant || null) === normalizedVariant
+            ? { ...i, quantity: qty }
+            : i,
+        ),
+      );
+    },
+    [],
+  );
   const clearCart = useCallback(() => {
     setItems([]);
     setPromoCode("");
     setAppliedCoupon(null);
+  }, []);
+
+  const clearCoupon = useCallback(() => {
+    setAppliedCoupon(null);
+    setPromoCode("");
   }, []);
 
   const subtotal = items.reduce((sum, i) => {
@@ -222,6 +261,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!code) {
       setAppliedCoupon(null);
       return { ok: false, message: "Enter a coupon code", discountAmount: 0 };
+    }
+
+    if (appliedCoupon && appliedCoupon.code !== code) {
+      return {
+        ok: false,
+        message: `Only one coupon can be applied at a time. Remove ${appliedCoupon.code} first.`,
+        discountAmount: discountAmount,
+      };
+    }
+
+    if (appliedCoupon && appliedCoupon.code === code) {
+      return {
+        ok: true,
+        message: `Coupon ${code} is already applied`,
+        coupon: appliedCoupon,
+        discountAmount,
+      };
     }
 
     setCouponLoading(true);
@@ -260,7 +316,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setCouponLoading(false);
     }
-  }, [promoCode, subtotal]);
+  }, [promoCode, subtotal, appliedCoupon, discountAmount]);
 
   return (
     <CartContext.Provider

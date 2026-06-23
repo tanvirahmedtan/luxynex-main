@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import React, { Suspense, lazy } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,42 +11,45 @@ import RequireAuth from "@/components/RequireAuth";
 import Layout from "@/components/layout/Layout";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import Index from "./pages/Index";
-import Shop from "./pages/Shop";
-import ProductPage from "./pages/ProductPage";
-import CartPage from "./pages/CartPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import TrackOrder from "./pages/TrackOrder";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import WishlistPage from "./pages/WishlistPage";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import ProfilePage from "./pages/ProfilePage";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import ReturnAndRefund from "./pages/ReturnAndRefund";
-import CheckoutPayment from "./pages/CheckoutPayment";
-import NotFound from "./pages/NotFound";
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminCustomers from "./pages/admin/AdminCustomers";
-import AdminBanners from "./pages/admin/AdminBanners";
-import AdminPopups from "./pages/admin/AdminPopups";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminCreateOrder from "./pages/admin/AdminCreateOrder";
-import AdminScanOrder from "./pages/admin/AdminScanOrder";
-import AdminOrderReport from "./pages/admin/AdminOrderReport";
-import AdminBarcodes from "./pages/admin/AdminBarcodes";
-import AdminStocks from "./pages/admin/AdminStocks";
-import AdminPurchases from "./pages/admin/AdminPurchases";
-import AdminAddPurchase from "./pages/admin/AdminAddPurchase";
-import AdminWarehouse from "./pages/admin/AdminWarehouse";
-import AdminSubcategories from "./pages/admin/AdminSubcategories";
-import AdminNewCustomer from "./pages/admin/AdminNewCustomer";
-import AdminCreateProduct from "./pages/admin/AdminCreateProduct";
-import { AdminCouponsList, AdminCouponForm } from "./pages/admin/AdminCoupons";
+const Shop = lazy(() => import("./pages/Shop"));
+const ProductPage = lazy(() => import("./pages/ProductPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const WishlistPage = lazy(() => import("./pages/WishlistPage"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const ReturnAndRefund = lazy(() => import("./pages/ReturnAndRefund"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Admin lazy-loaded
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminCustomers = lazy(() => import("./pages/admin/AdminCustomers"));
+const AdminBanners = lazy(() => import("./pages/admin/AdminBanners"));
+const AdminPopups = lazy(() => import("./pages/admin/AdminPopups"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminCreateOrder = lazy(() => import("./pages/admin/AdminCreateOrder"));
+const AdminScanOrder = lazy(() => import("./pages/admin/AdminScanOrder"));
+const AdminOrderReport = lazy(() => import("./pages/admin/AdminOrderReport"));
+const AdminBarcodes = lazy(() => import("./pages/admin/AdminBarcodes"));
+const AdminStocks = lazy(() => import("./pages/admin/AdminStocks"));
+const AdminPurchases = lazy(() => import("./pages/admin/AdminPurchases"));
+const AdminAddPurchase = lazy(() => import("./pages/admin/AdminAddPurchase"));
+const AdminWarehouse = lazy(() => import("./pages/admin/AdminWarehouse"));
+const AdminSubcategories = lazy(() => import("./pages/admin/AdminSubcategories"));
+const AdminNewCustomer = lazy(() => import("./pages/admin/AdminNewCustomer"));
+const AdminCreateProduct = lazy(() => import("./pages/admin/AdminCreateProduct"));
+const AdminCouponsList = lazy(() => import("./pages/admin/AdminCoupons").then(m => ({ default: m.AdminCouponsList })));
+const AdminCouponForm = lazy(() => import("./pages/admin/AdminCoupons").then(m => ({ default: m.AdminCouponForm })));
 
 const queryClient = new QueryClient();
 
@@ -59,7 +63,8 @@ const App = () => (
             <Sonner />
             <PWAInstallBanner />
             <BrowserRouter>
-              <Routes>
+              <Suspense fallback={<div className="min-h-[60vh]" />}>
+                <Routes>
                 {/* Public Routes with Layout */}
                 <Route path="/" element={<Layout><Index /></Layout>} />
                 <Route path="/shop" element={<Layout><Shop /></Layout>} />
@@ -161,7 +166,8 @@ const App = () => (
                   element={<AdminCouponForm />}
                 />
                 <Route path="*" element={<Layout><NotFound /></Layout>} />
-              </Routes>
+                </Routes>
+              </Suspense>
             </BrowserRouter>
           </WishlistProvider>
         </CartProvider>
