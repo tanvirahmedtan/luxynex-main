@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard";
+import HorizontalScroll from "@/components/ui/HorizontalScroll";
 
 export default function CategorySections() {
   const { categories, loading: catLoading } = useCategories();
@@ -44,7 +45,7 @@ export default function CategorySections() {
                 See More <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+            <HorizontalScroll>
               {items.map((p) => (
                 <div
                   key={p.id}
@@ -53,7 +54,7 @@ export default function CategorySections() {
                   <ProductCard product={p} />
                 </div>
               ))}
-            </div>
+            </HorizontalScroll>
           </section>
         );
       })}

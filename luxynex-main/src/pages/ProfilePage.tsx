@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,9 +22,14 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
+  Star,
+  Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import CustomerReviews from "@/components/dashboard/CustomerReviews";
+import SupportTickets from "@/components/dashboard/SupportTickets";
+import CreateTicket from "@/components/dashboard/CreateTicket";
 import type { Database } from "@/integrations/supabase/types";
 
 type AdminOrder = Database["public"]["Tables"]["admin_orders"]["Row"];
@@ -56,6 +61,9 @@ export default function ProfilePage() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const { items: wishlistItems } = useWishlist();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const section = searchParams.get("section") || "overview";
+  const action = searchParams.get("action") || undefined;
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "" });
   const [orders, setOrders] = useState<AdminOrder[]>([]);

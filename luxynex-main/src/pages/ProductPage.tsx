@@ -383,8 +383,9 @@ export default function ProductPage() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3 pt-1 flex-col sm:flex-row">
+            <div className="flex items-center gap-3 pt-1">
               <button
+                type="button"
                 onClick={() => {
                   if (isOOS) return;
 
@@ -401,11 +402,12 @@ export default function ProductPage() {
                   toast.success("Added to cart!");
                 }}
                 disabled={isOOS}
-                className="flex-1 border-2 border-primary text-primary py-3 rounded-xl text-sm font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                className="min-w-0 flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-900 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ShoppingCart className="w-4 h-4" /> Add to Cart
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (isOOS) return;
                   if (!user) {
@@ -427,11 +429,12 @@ export default function ProductPage() {
                   navigate("/checkout");
                 }}
                 disabled={isOOS}
-                className="flex-1 bg-foreground text-background py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:pointer-events-none"
+                className="min-w-0 flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-900 disabled:opacity-50 disabled:pointer-events-none"
               >
                 Buy Now
               </button>
               <button
+                type="button"
                 onClick={() => {
                   if (wishlisted) {
                     removeFromWishlist(product.id);
@@ -441,11 +444,11 @@ export default function ProductPage() {
                     toast.success("Added to wishlist");
                   }
                 }}
-                className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted hover:bg-primary/10 transition-colors"
                 aria-label="Wishlist"
               >
                 <Heart
-                  className={`w-5 h-5 ${wishlisted ? "fill-red-500 text-red-500" : ""}`}
+                  className={`w-5 h-5 ${wishlisted ? "fill-red-500 text-red-500" : "text-foreground"}`}
                 />
               </button>
             </div>

@@ -119,6 +119,16 @@ export default function Footer() {
                 </Link>
               </li>
             ))}
+            {policyLinks.map((link) => (
+              <li key={link.to} className="sm:hidden">
+                <Link
+                  to={link.to}
+                  className="text-sm text-white/70 transition-colors hover:text-primary"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -180,7 +190,7 @@ export default function Footer() {
 
       {/* Payment & Copyright */}
       <div className="border-t border-white/10">
-        <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 footer-safe">
           <p className="text-xs text-white/55">
             © 2026 Lucynex. All Rights Reserved. | Owned & Operated by Tanvir Ahmed
           </p>
