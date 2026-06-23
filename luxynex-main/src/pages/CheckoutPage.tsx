@@ -57,12 +57,12 @@ type PendingOrderPayload = {
 
 type ValidateCouponResponse = {
   data: CouponValidationResult[] | null;
-  error: any;
+  error: unknown;
 };
 
 type PlaceOrderResponse = {
   data: PlaceOrderResult | null;
-  error: any;
+  error: unknown;
 };
 
 type CheckoutForm = {
@@ -147,15 +147,16 @@ export default function CheckoutPage() {
     let validatedPromoCode = appliedCoupon?.code || promoCode.trim().toUpperCase();
 
     if (validatedPromoCode) {
-      const { data: couponData, error: couponError } = await (
-        supabase.rpc as any
-      )("validate_coupon_code", {
-        p_code: validatedPromoCode,
-        p_subtotal: subtotal,
-      }) as ValidateCouponResponse;
+      const { data: couponData, error: couponError } = (await supabase.rpc(
+        "validate_coupon_code",
+        {
+          p_code: validatedPromoCode,
+          p_subtotal: subtotal,
+        },
+      )) as ValidateCouponResponse;
 
       if (couponError) {
-        toast.error(couponError.message);
+        toast.error(getErrorMessage(couponError, "Failed to validate coupon."));
         return;
       }
 
@@ -236,13 +237,15 @@ export default function CheckoutPage() {
         .join(" | "),
     };
 
-    const { data, error } = await (supabase.rpc as any)(
+    const { data, error } = (await supabase.rpc(
       "place_order",
       orderPayload,
-    ) as PlaceOrderResponse;
+    )) as PlaceOrderResponse;
 
     if (error || !data || !Array.isArray(data) || data.length === 0) {
-      toast.error(error?.message || "Failed to place order. Please try again.");
+      toast.error(
+        getErrorMessage(error, "Failed to place order. Please try again."),
+      );
       setLoading(false);
       return;
     }
