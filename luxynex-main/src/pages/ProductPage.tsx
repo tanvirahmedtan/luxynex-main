@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type CouponRow = { code: string; description: string };
 
@@ -34,6 +35,18 @@ export default function ProductPage() {
   const { id } = useParams();
   const { products, loading } = useProducts();
   const product = products.find((p) => p.id === id);
+  const productVariants = Array.isArray(product?.variants)
+    ? (product.variants as unknown[])
+    : [];
+  const productAttributes = Array.isArray(product?.attributes)
+    ? (product.attributes as unknown[])
+    : [];
+  const productColors = Array.isArray(product?.colors)
+    ? (product.colors as string[])
+    : [];
+  const productSizes = Array.isArray(product?.sizes)
+    ? (product.sizes as string[])
+    : [];
   const { addToCart, clearCart } = useCart();
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
   const { user } = useAuth();
@@ -59,8 +72,8 @@ export default function ProductPage() {
   >("description");
   const [coupons, setCoupons] = useState<CouponRow[]>([]);
 
-  const hasColorSelection = Boolean(product.colors && product.colors.length > 0);
-  const hasSizeSelection = Boolean(product.sizes && product.sizes.length > 0);
+  const hasColorSelection = Boolean(productColors.length > 0);
+  const hasSizeSelection = Boolean(productSizes.length > 0);
   const isVariantSelectionComplete =
     (!hasColorSelection || Boolean(selectedColor)) &&
     (!hasSizeSelection || Boolean(selectedSize));
@@ -74,19 +87,26 @@ export default function ProductPage() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("coupons")
-        .select("code, description")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+        .select("code, description");
       setCoupons(data || []);
     })();
   }, []);
 
   if (loading)
     return (
-      <div className="container mx-auto px-4 py-20 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <div className="container mx-auto px-4 py-20 space-y-4">
+        <Skeleton className="h-10 max-w-md mx-auto rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="h-96 rounded-[30px]" />
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-3/5 rounded-xl" />
+            <Skeleton className="h-8 w-2/4 rounded-xl" />
+            <Skeleton className="h-10 rounded-xl" />
+            <Skeleton className="h-40 rounded-3xl" />
+          </div>
+        </div>
       </div>
     );
 
@@ -161,10 +181,10 @@ export default function ProductPage() {
           </Link>
           <ChevronRight className="w-3 h-3" />
           <Link
-            to={`/shop?cat=${product.category}`}
+            to={`/shop?cat=${product?.category ?? ""}`}
             className="hover:text-primary capitalize"
           >
-            {product.subcategory || product.category}
+            {product?.subcategory || product?.category}
           </Link>
           <ChevronRight className="w-3 h-3" />
           <span className="text-foreground line-clamp-1">{product.name}</span>
@@ -284,7 +304,7 @@ export default function ProductPage() {
               transition={{ duration: 0.35 }}
               className="space-y-5"
             >
-              {product.colors && product.colors.length > 0 && (
+              {productColors.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2">
                     Color:{" "}
@@ -293,7 +313,7 @@ export default function ProductPage() {
                     </span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {product.colors.map((c, i) => (
+                    {productColors.map((c, i) => (
                       <button
                         key={i}
                         onClick={() => setSelectedColor(c)}
@@ -307,7 +327,7 @@ export default function ProductPage() {
                 </div>
               )}
 
-              {product.sizes && product.sizes.length > 0 && (
+              {productSizes.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2">
                     Size:{" "}
@@ -316,7 +336,7 @@ export default function ProductPage() {
                     </span>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {product.sizes.map((s, i) => (
+                    {productSizes.map((s, i) => (
                       <button
                         key={i}
                         onClick={() => setSelectedSize(s)}
@@ -413,10 +433,13 @@ export default function ProductPage() {
               </button>
               <button
                 onClick={() => {
-                  wishlisted
-                    ? removeFromWishlist(product.id)
-                    : addToWishlist(product);
-                  toast.success(wishlisted ? "Removed" : "Added to wishlist");
+                  if (wishlisted) {
+                    removeFromWishlist(product.id);
+                    toast.success("Removed");
+                  } else {
+                    addToWishlist(product);
+                    toast.success("Added to wishlist");
+                  }
                 }}
                 className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors"
                 aria-label="Wishlist"
@@ -546,18 +569,18 @@ export default function ProductPage() {
                     <span>{product.sku}</span>
                   </li>
                 )}
-                {product.colors && (
+                {productColors.length > 0 && (
                   <li className="flex justify-between border-b border-border pb-2">
                     <span className="font-medium text-foreground">
                       Available Colors
                     </span>
-                    <span>{product.colors.length}</span>
+                    <span>{productColors.length}</span>
                   </li>
                 )}
-                {product.sizes && (
+                {productSizes.length > 0 && (
                   <li className="flex justify-between border-b border-border pb-2">
                     <span className="font-medium text-foreground">Sizes</span>
-                    <span>{product.sizes.join(", ")}</span>
+                    <span>{productSizes.join(", ")}</span>
                   </li>
                 )}
                 <li className="flex justify-between">
