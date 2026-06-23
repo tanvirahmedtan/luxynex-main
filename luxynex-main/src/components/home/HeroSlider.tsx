@@ -12,51 +12,54 @@ type Slide = {
   link_url: string;
 };
 
-const fallbackSlides: Slide[] = [
-  {
-    id: "f1",
-    title: "Glow Up Your Space",
-    subtitle: "RGB & LED Lights Collection",
-    link_url: "/shop?cat=lights",
-    image_url: "https://picsum.photos/seed/slide1/1200/500",
-  },
-  {
-    id: "f2",
-    title: "Signature Scents",
-    subtitle: "Premium Arabian Attar & Perfumes",
-    link_url: "/shop?cat=perfume",
-    image_url: "https://picsum.photos/seed/slide2/1200/500",
-  },
-  {
-    id: "f3",
-    title: "Trending Gadgets",
-    subtitle: "Latest Tech Under One Roof",
-    link_url: "/shop?cat=trending",
-    image_url: "https://picsum.photos/seed/slide3/1200/500",
-  },
-];
-
 export default function HeroSlider() {
-  const [slides, setSlides] = useState<Slide[]>(fallbackSlides);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [current, setCurrent] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const CACHE_KEY = "luxynex_banners_v1";
+  const CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from("admin_banners")
-        .select("id, title, subtitle, image_url, link_url")
-        .eq("is_active", true)
-        .order("sort_order");
-      if (data && data.length > 0) {
-        setSlides(
-          data.map((d) => ({
-            id: d.id,
-            title: d.title || "",
-            subtitle: d.subtitle || "",
-            image_url: d.image_url,
-            link_url: d.link_url || "/shop",
-          })),
-        );
+      try {
+        // Try cache first
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.ts && Date.now() - parsed.ts < CACHE_TTL && Array.isArray(parsed.data)) {
+            setSlides(parsed.data);
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { data, error } = await supabase
+          .from("admin_banners")
+          .select("id, title, subtitle, image_url, link_url")
+          .eq("is_active", true)
+          .order("sort_order");
+        if (error) throw error;
+        const mapped = (data || []).map((d) => ({
+          id: d.id,
+          title: d.title || "",
+          subtitle: d.subtitle || "",
+          image_url: d.image_url,
+          link_url: d.link_url || "/shop",
+        }));
+        // Only render admin-approved banners; if empty, keep slides empty so skeleton shows
+        setSlides(mapped);
+        // cache
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: mapped }));
+        } catch (e) {
+          // ignore storage errors
+        }
+      } catch (err) {
+        // on error, keep slides empty to avoid showing any unapproved/fallback banners
+        setSlides([]);
+      } finally {
+        setLoading(false);
       }
     };
     load();
@@ -64,15 +67,19 @@ export default function HeroSlider() {
 
   useEffect(() => {
     if (slides.length <= 1) return;
-    const timer = setInterval(
-      () => setCurrent((p) => (p + 1) % slides.length),
-      5000,
-    );
+    const timer = setInterval(() => setCurrent((p) => (p + 1) % slides.length), 5000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
   const slide = slides[current] || slides[0];
-  if (!slide) return null;
+  if (loading || !slide) {
+    // show skeleton while loading or when no slides
+    return (
+      <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-border bg-muted sm:min-h-[380px] lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
+        <div className="animate-pulse h-full w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-border bg-muted sm:min-h-[380px] lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
@@ -89,8 +96,9 @@ export default function HeroSlider() {
             <img
               src={slide.image_url}
               alt={slide.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
+              className="absolute inset-0 w-full h-full object-cover transform-gpu will-change-transform"
+              loading={current === 0 ? "eager" : "lazy"}
+              {...(current === 0 ? { fetchPriority: "high" as any } : {})}
             />
             {(slide.title || slide.subtitle) && (
               <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent flex items-center p-6 sm:p-10">

@@ -9,7 +9,7 @@ interface SEOProps {
   jsonLd?: Record<string, any> | Record<string, any>[];
 }
 
-const SITE = "https://luxynex.shop";
+const SITE = "https://www.luxynex.shop";
 const DEFAULT_TITLE =
   "Luxynex | Premium Gadgets, Attar & Perfumes in Bangladesh";
 const DEFAULT_DESC =

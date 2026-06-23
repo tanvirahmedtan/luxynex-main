@@ -38,6 +38,7 @@ type PendingOrderItem = {
   quantity: number;
   price: number;
   name: string;
+  selected_variant?: string | null;
 };
 
 type PendingOrderPayload = {
@@ -79,6 +80,7 @@ export default function CheckoutPage() {
     items,
     subtotal,
     discountAmount,
+    appliedCoupon,
     clearCart,
     promoCode,
     setPromoCode,
@@ -142,7 +144,7 @@ export default function CheckoutPage() {
         : phone;
 
     let appliedDiscountAmount = discountAmount;
-    let validatedPromoCode = promoCode.trim().toUpperCase();
+    let validatedPromoCode = appliedCoupon?.code || promoCode.trim().toUpperCase();
 
     if (validatedPromoCode) {
       const { data: couponData, error: couponError } = await (
@@ -176,6 +178,7 @@ export default function CheckoutPage() {
           quantity: i.quantity,
           price: i.product.price,
           name: i.product.name,
+          selected_variant: i.selectedVariant ?? null,
         })),
         customer_name: fullName,
         customer_phone: normalizedPhone,
@@ -218,6 +221,7 @@ export default function CheckoutPage() {
       p_items: items.map((i) => ({
         product_id: i.product.id,
         quantity: i.quantity,
+        selected_variant: i.selectedVariant ?? null,
       })),
       p_shipping_fee: deliveryFee,
       p_promo_discount_percent:

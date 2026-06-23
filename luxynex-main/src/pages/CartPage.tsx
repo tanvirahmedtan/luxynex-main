@@ -9,6 +9,7 @@ export default function CartPage() {
     items: rawItems,
     updateQuantity,
     removeFromCart,
+    clearCoupon,
     subtotal,
     promoCode,
     setPromoCode,
@@ -62,15 +63,17 @@ export default function CartPage() {
         </h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-3">
-            {items?.map(({ product: p, quantity }) => {
+            {items?.map(({ product: p, quantity, selectedVariant }) => {
               const productId = p?.id ?? "";
               const productName = p?.name ?? "Cart item";
               const productPrice = Number(p?.price ?? 0);
               const productQuantity = Number(quantity ?? 0);
+              const normalizedVariant = selectedVariant ?? null;
+              const itemKey = `${productId}-${normalizedVariant ?? "default"}-${productQuantity}`;
 
               return (
                 <div
-                  key={productId || `${productName}-${productQuantity}`}
+                  key={itemKey}
                   className="light-card p-4 flex gap-4 items-center"
                 >
                   <img
@@ -85,14 +88,19 @@ export default function CartPage() {
                     >
                       {productName}
                     </Link>
-                    <p className="text-primary font-bold text-sm">
+                    {normalizedVariant ? (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {normalizedVariant}
+                      </p>
+                    ) : null}
+                    <p className="text-primary font-bold text-sm mt-1">
                       ৳{productPrice}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        if (productId) updateQuantity(productId, productQuantity - 1);
+                        if (productId) updateQuantity(productId, productQuantity - 1, normalizedVariant);
                       }}
                       className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-primary/10"
                     >
@@ -103,7 +111,7 @@ export default function CartPage() {
                     </span>
                     <button
                       onClick={() => {
-                        if (productId) updateQuantity(productId, productQuantity + 1);
+                        if (productId) updateQuantity(productId, productQuantity + 1, normalizedVariant);
                       }}
                       className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-primary/10"
                     >
@@ -116,7 +124,7 @@ export default function CartPage() {
                   <button
                     onClick={() => {
                       if (productId) {
-                        removeFromCart(productId);
+                        removeFromCart(productId, normalizedVariant);
                         toast.info("Removed from cart");
                       }
                     }}
@@ -159,23 +167,37 @@ export default function CartPage() {
               <span>Total</span>
               <span className="text-primary text-lg">৳{total}</span>
             </div>
-            <div className="flex gap-2">
-              <input
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="Promo code"
-                className="flex-1 bg-muted rounded-xl px-3 py-2 text-sm outline-none"
-              />
-              <button
-                onClick={async () => {
-                  const result = await applyPromo();
-                  toast[result.ok ? "success" : "error"](result.message);
-                }}
-                disabled={couponLoading}
-                className="primary-btn px-4 py-2 text-xs disabled:opacity-60"
-              >
-                {couponLoading ? "Checking..." : "Apply"}
-              </button>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Promo code"
+                  className="flex-1 bg-muted rounded-xl px-3 py-2 text-sm outline-none"
+                />
+                <button
+                  onClick={async () => {
+                    const result = await applyPromo();
+                    toast[result.ok ? "success" : "error"](result.message);
+                  }}
+                  disabled={couponLoading}
+                  className="primary-btn px-4 py-2 text-xs disabled:opacity-60"
+                >
+                  {couponLoading ? "Checking..." : "Apply"}
+                </button>
+              </div>
+              {discountAmount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearCoupon();
+                    toast.success("Coupon removed");
+                  }}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-foreground hover:bg-gray-50"
+                >
+                  Remove coupon
+                </button>
+              )}
             </div>
             <button
               type="button"

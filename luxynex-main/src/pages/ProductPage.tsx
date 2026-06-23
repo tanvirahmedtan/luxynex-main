@@ -52,11 +52,25 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [shakeVariants, setShakeVariants] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [tab, setTab] = useState<
     "description" | "specs" | "exchange" | "notice"
   >("description");
   const [coupons, setCoupons] = useState<CouponRow[]>([]);
+
+  const hasColorSelection = Boolean(product.colors && product.colors.length > 0);
+  const hasSizeSelection = Boolean(product.sizes && product.sizes.length > 0);
+  const isVariantSelectionComplete =
+    (!hasColorSelection || Boolean(selectedColor)) &&
+    (!hasSizeSelection || Boolean(selectedSize));
+
+  const selectedVariantLabel = [
+    hasColorSelection && selectedColor ? `Color: ${selectedColor}` : null,
+    hasSizeSelection && selectedSize ? `Size: ${selectedSize}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ") || null;
 
   useEffect(() => {
     (async () => {
@@ -265,53 +279,61 @@ export default function ProductPage() {
             </div>
 
             {/* Variants */}
-            {product.colors && product.colors.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">
-                  Color:{" "}
-                  <span className="text-muted-foreground">
-                    {selectedColor || "Select"}
-                  </span>
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {product.colors.map((c, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedColor(c)}
-                      className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border hover:border-primary"}`}
-                      style={{ backgroundColor: c }}
-                      title={c}
-                    />
-                  ))}
+            <motion.div
+              animate={shakeVariants ? { x: [0, -8, 8, -6, 6, 0] } : { x: 0 }}
+              transition={{ duration: 0.35 }}
+              className="space-y-5"
+            >
+              {product.colors && product.colors.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">
+                    Color:{" "}
+                    <span className="text-muted-foreground">
+                      {selectedColor || "Select"}
+                    </span>
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {product.colors.map((c, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedColor(c)}
+                        className={`w-9 h-9 rounded-full border-2 transition-all ${selectedColor === c ? "border-primary ring-2 ring-primary/30 scale-110" : "border-border hover:border-primary"}`}
+                        style={{ backgroundColor: c }}
+                        title={c}
+                        type="button"
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {product.sizes && product.sizes.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">
-                  Size:{" "}
-                  <span className="text-muted-foreground">
-                    {selectedSize || "Select"}
-                  </span>
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {product.sizes.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedSize(s)}
-                      className={`min-w-[44px] px-3 h-10 rounded-xl border-2 text-sm font-medium transition-all ${
-                        selectedSize === s
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+              {product.sizes && product.sizes.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">
+                    Size:{" "}
+                    <span className="text-muted-foreground">
+                      {selectedSize || "Select"}
+                    </span>
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {product.sizes.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedSize(s)}
+                        className={`min-w-[44px] px-3 h-10 rounded-xl border-2 text-sm font-medium transition-all ${
+                          selectedSize === s
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:border-primary"
+                        }`}
+                        type="button"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </motion.div>
 
             {/* Quantity */}
             <div>
@@ -341,31 +363,51 @@ export default function ProductPage() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3 pt-1">
+            <div className="flex gap-3 pt-1 flex-col sm:flex-row">
               <button
                 onClick={() => {
-                  addToCart(product, qty);
+                  if (isOOS) return;
+
+                  if (!isVariantSelectionComplete) {
+                    setShakeVariants(true);
+                    toast.error(
+                      "Please select your preferred size and variant options before adding to cart!",
+                    );
+                    setTimeout(() => setShakeVariants(false), 360);
+                    return;
+                  }
+
+                  addToCart(product, qty, selectedVariantLabel);
                   toast.success("Added to cart!");
                 }}
                 disabled={isOOS}
-                className="flex-1 border-2 border-primary text-primary py-3 rounded-xl text-sm font-semibold hover:bg-primary/10 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 border-2 border-primary text-primary py-3 rounded-xl text-sm font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50 disabled:pointer-events-none"
               >
                 <ShoppingCart className="w-4 h-4" /> Add to Cart
               </button>
               <button
                 onClick={() => {
+                  if (isOOS) return;
                   if (!user) {
                     toast("Please sign in to complete checkout.");
                     navigate("/signin", { state: { from: "/checkout" } });
                     return;
                   }
+                  if (!isVariantSelectionComplete) {
+                    setShakeVariants(true);
+                    toast.error(
+                      "Please select your preferred size and variant options before adding to cart!",
+                    );
+                    setTimeout(() => setShakeVariants(false), 360);
+                    return;
+                  }
                   clearCart();
-                  addToCart(product, qty);
+                  addToCart(product, qty, selectedVariantLabel);
                   toast.success("Proceeding to checkout!");
                   navigate("/checkout");
                 }}
                 disabled={isOOS}
-                className="flex-1 bg-foreground text-background py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 bg-foreground text-background py-3 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:pointer-events-none"
               >
                 Buy Now
               </button>
