@@ -247,6 +247,13 @@ export default function ProfilePage() {
                   <ChevronRight className="h-4 w-4" />
                 </Link>
                 <Link
+                  to="/support-tickets"
+                  className="flex items-center justify-between rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/50"
+                >
+                  Support Tickets
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+                <Link
                   to="/shop"
                   className="flex items-center justify-between rounded-2xl border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent/50"
                 >

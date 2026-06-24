@@ -23,6 +23,7 @@ const WishlistPage = lazy(() => import("./pages/WishlistPage"));
 const SignIn = lazy(() => import("./pages/SignIn"));
 const SignUp = lazy(() => import("./pages/SignUp"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const ReturnAndRefund = lazy(() => import("./pages/ReturnAndRefund"));
@@ -48,6 +49,7 @@ const AdminWarehouse = lazy(() => import("./pages/admin/AdminWarehouse"));
 const AdminSubcategories = lazy(() => import("./pages/admin/AdminSubcategories"));
 const AdminNewCustomer = lazy(() => import("./pages/admin/AdminNewCustomer"));
 const AdminCreateProduct = lazy(() => import("./pages/admin/AdminCreateProduct"));
+const AdminSupportTickets = lazy(() => import("./pages/admin/AdminSupportTickets"));
 const AdminCouponsList = lazy(() => import("./pages/admin/AdminCoupons").then(m => ({ default: m.AdminCouponsList })));
 const AdminCouponForm = lazy(() => import("./pages/admin/AdminCoupons").then(m => ({ default: m.AdminCouponForm })));
 
@@ -100,6 +102,7 @@ const App = () => (
                 <Route path="/signin" element={<Layout><SignIn /></Layout>} />
                 <Route path="/signup" element={<Layout><SignUp /></Layout>} />
                 <Route path="/profile" element={<Layout><ProfilePage /></Layout>} />
+                <Route path="/support-tickets" element={<Layout><RequireAuth><SupportTickets /></RequireAuth></Layout>} />
                 <Route path="/privacy-policy" element={<Layout><PrivacyPolicy /></Layout>} />
                 <Route path="/terms-of-service" element={<Layout><TermsOfService /></Layout>} />
                 <Route path="/return-and-refund" element={<Layout><ReturnAndRefund /></Layout>} />
@@ -109,6 +112,7 @@ const App = () => (
                 <Route path="/admin/products" element={<AdminProducts />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/customers" element={<AdminCustomers />} />
+                <Route path="/admin/support-tickets" element={<AdminSupportTickets />} />
                 <Route path="/admin/banners" element={<AdminBanners />} />
                 <Route path="/admin/popups" element={<AdminPopups />} />
                 <Route path="/admin/categories" element={<AdminCategories />} />

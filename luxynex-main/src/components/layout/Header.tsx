@@ -48,8 +48,15 @@ export default function Header() {
 
   return (
     <>
-      <div className="bg-secondary text-secondary-foreground text-center py-2 text-xs sm:text-sm font-medium tracking-wide">
-        🚚 Free Delivery on orders above ৳5000!
+      <div className="announcement-bar">
+        <div className="marquee-track">
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+          <span>🚚 Free Delivery on orders above ৳5000!</span>
+        </div>
       </div>
       <header
         className={`sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur-md transition-all duration-300 ${scrolled ? "shadow-sm" : ""}`}
