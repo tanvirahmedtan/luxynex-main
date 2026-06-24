@@ -1,19 +1,13 @@
 import { Link } from "react-router-dom";
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ShoppingCart } from "lucide-react";
 import { Product } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
-const badgeStyles = {
-  new: "bg-blue-100 text-blue-700",
-  hot: "bg-red-100 text-red-600",
-  sale: "bg-green-100 text-green-700",
-};
-
 const stockStyles = {
-  "in-stock": "text-green-600",
+  "in-stock": "text-emerald-600",
   limited: "text-amber-500",
   "out-of-stock": "text-destructive",
 };
@@ -37,36 +31,52 @@ export default function ProductCard({ product }: { product: Product }) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="light-card-hover group overflow-hidden"
+      className="font-sans overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative overflow-hidden">
-        <Link to={`/product/${product.id}`}>
+        <Link to={`/product/${product.id}`} className="block">
           <img
             src={product.image}
             alt={product.name}
-            className="w-full aspect-square object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full aspect-square object-cover transition duration-500 hover:scale-105"
             loading="lazy"
           />
+          <div className="px-3 pt-3 pb-2">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400 mb-1">
+              {product.subcategory}
+            </p>
+            <h3 className="text-base font-semibold text-slate-950 leading-6 mb-1 truncate">
+              {product.name}
+            </h3>
+            <div className="flex items-end gap-1.5">
+              <p className="text-lg font-semibold text-orange-500">৳{product.price}</p>
+              {product.originalPrice && (
+                <p className="text-sm text-slate-400 line-through">৳{product.originalPrice}</p>
+              )}
+            </div>
+            <div className="mt-1 flex items-center justify-between gap-2 text-sm text-slate-500">
+              <span className={stockStyles[product.stock] ?? "text-slate-500"}>
+                {stockLabels[product.stock]}
+              </span>
+              {product.rating > 0 && (
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                  ⭐ {product.rating.toFixed(1)}
+                </span>
+              )}
+            </div>
+          </div>
         </Link>
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {product.badge && (
-            <span
-              className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${badgeStyles[product.badge]}`}
-            >
-              {product.badge}
-            </span>
-          )}
-          {discount > 0 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              -{discount}%
-            </span>
-          )}
-        </div>
-        {/* Wishlist */}
+
+        {discount > 0 && (
+          <span className="absolute right-4 top-4 z-10 rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
+            Save {discount}%
+          </span>
+        )}
+
         <button
           type="button"
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             if (wishlisted) {
               removeFromWishlist(product.id);
               toast.info("Removed from wishlist");
@@ -75,52 +85,29 @@ export default function ProductCard({ product }: { product: Product }) {
               toast.success("Added to wishlist");
             }
           }}
-          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center transition-colors hover:bg-primary/10"
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm text-slate-700 transition hover:bg-slate-50"
         >
           <Heart
-            className={`w-4 h-4 ${wishlisted ? "fill-red-500 text-red-500" : "text-muted-foreground"}`}
+            className={`w-4 h-4 ${wishlisted ? "fill-red-500 text-red-500" : "text-slate-700"}`}
           />
         </button>
-        {/* Quick Add */}
+      </div>
+
+      <div className="px-3 pb-2 pt-2">
         <button
           type="button"
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             addToCart(product);
             toast.success(`${product.name} added to cart`);
           }}
           disabled={product.stock === "out-of-stock"}
-          className="absolute bottom-0 left-0 right-0 bg-primary text-primary-foreground py-2.5 text-sm font-semibold translate-y-full group-hover:translate-y-0 transition-transform duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-orange-400 bg-white px-3 py-2 text-sm font-semibold text-orange-500 transition hover:bg-orange-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ShoppingCart className="w-4 h-4" /> Add to Cart
         </button>
       </div>
-      <Link to={`/product/${product.id}`} className="block p-3">
-        <p className="text-xs text-muted-foreground mb-1">
-          {product.subcategory}
-        </p>
-        <h3 className="text-sm font-medium text-foreground truncate mb-1">
-          {product.name}
-        </h3>
-        <div className="flex items-center gap-1 mb-2">
-          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-          <span className="text-xs text-muted-foreground">
-            {product.rating} ({product.reviews})
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-primary">৳{product.price}</span>
-          {product.originalPrice && (
-            <span className="text-xs text-muted-foreground line-through">
-              ৳{product.originalPrice}
-            </span>
-          )}
-        </div>
-        <p
-          className={`text-[10px] mt-1 font-medium ${stockStyles[product.stock]}`}
-        >
-          {stockLabels[product.stock]}
-        </p>
-      </Link>
     </motion.div>
   );
 }

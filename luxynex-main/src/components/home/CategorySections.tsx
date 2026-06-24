@@ -3,7 +3,12 @@ import { ChevronRight } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard";
-import HorizontalScroll from "@/components/ui/HorizontalScroll";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselIndicators,
+} from "@/components/ui/carousel";
 
 export default function CategorySections() {
   const { categories, loading: catLoading } = useCategories();
@@ -45,16 +50,18 @@ export default function CategorySections() {
                 See More <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-            <HorizontalScroll>
-              {items.map((p) => (
-                <div
-                  key={p.id}
-                  className="min-w-[200px] max-w-[200px] flex-shrink-0"
-                >
-                  <ProductCard product={p} />
-                </div>
-              ))}
-            </HorizontalScroll>
+            <Carousel opts={{ loop: false, align: "start", slidesToScroll: 1 }} className="pb-6">
+              <CarouselContent className="gap-2">
+                {items.map((p) => (
+                  <CarouselItem key={p.id} className="min-w-[220px] max-w-[220px]">
+                    <ProductCard product={p} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="mt-4 flex items-center justify-center">
+                <CarouselIndicators />
+              </div>
+            </Carousel>
           </section>
         );
       })}

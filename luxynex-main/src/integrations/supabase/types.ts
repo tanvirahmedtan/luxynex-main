@@ -133,6 +133,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      support_tickets: {
+        Row: {
+          admin_reply: string | null;
+          attachment_url: string | null;
+          created_at: string;
+          customer_email: string | null;
+          customer_name: string;
+          customer_phone: string | null;
+          description: string;
+          id: string;
+          status: Database["public"]["Enums"]["ticket_status"];
+          topic: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          admin_reply?: string | null;
+          attachment_url?: string | null;
+          created_at?: string;
+          customer_email?: string | null;
+          customer_name: string;
+          customer_phone?: string | null;
+          description: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["ticket_status"];
+          topic: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          admin_reply?: string | null;
+          attachment_url?: string | null;
+          created_at?: string;
+          customer_email?: string | null;
+          customer_name?: string;
+          customer_phone?: string | null;
+          description?: string;
+          id?: string;
+          status?: Database["public"]["Enums"]["ticket_status"];
+          topic?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       admin_orders: {
         Row: {
           created_at: string;
@@ -525,6 +573,7 @@ export type Database = {
         | "delivered"
         | "cancelled";
       payment_method: "cod" | "bkash" | "nagad" | "rocket";
+      ticket_status: "open" | "in_progress" | "resolved";
     };
     CompositeTypes: {
       [_ in never]: never;
