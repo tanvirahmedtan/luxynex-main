@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  Image as ImageIcon,
   FolderTree,
   Boxes,
   Truck,
@@ -18,6 +17,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type NavChild = { label: string; path: string };
 type NavGroup = { label: string; icon: any; children: NavChild[] };
@@ -138,21 +138,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside
         className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-background border-r border-border flex flex-col transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <Link to="/admin" className="flex items-center gap-3">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-3">
             <img
-              src="/assets/logo.png"
-              alt="Luxynex Admin"
-              className="w-10 h-10 rounded-xl object-cover"
+              src="/favicon.png"
+              alt="Luxynex Logo"
+              className="h-12 w-12 rounded-2xl object-contain bg-slate-100 p-2"
             />
-            <span className="font-bold text-foreground">Admin Panel</span>
-          </Link>
-          <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                Admin Portal
+              </p>
+              <p className="text-base font-semibold text-foreground">Luxynex</p>
+            </div>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Manage store operations, track sales, and monitor inventory with a clean admin experience.
+          </p>
+          <button className="mt-3 lg:hidden inline-flex items-center justify-center rounded-xl border border-border bg-background p-2 text-foreground shadow-sm" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-3">
           {navGroups.map((group) => {
             const isOpen =
               openGroups[group.label] ??
@@ -161,10 +169,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               (c) => c.path === location.pathname,
             );
             return (
-              <div key={group.label}>
+              <div key={group.label} className="rounded-3xl border border-border bg-background/80">
                 <button
                   onClick={() => toggleGroup(group.label)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${hasActive ? "text-foreground bg-muted/60" : "text-foreground hover:bg-muted"}`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition ${hasActive ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"}`}
                 >
                   <group.icon className="w-4 h-4" />
                   <span className="flex-1 text-left">{group.label}</span>
@@ -173,7 +181,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   />
                 </button>
                 {isOpen && (
-                  <div className="mt-1 ml-7 border-l border-border pl-3 space-y-0.5">
+                  <div className="space-y-1 border-t border-border px-4 py-3">
                     {group.children.map((child) => {
                       const active = location.pathname === child.path;
                       return (
@@ -181,7 +189,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                           key={child.path}
                           to={child.path}
                           onClick={() => setSidebarOpen(false)}
-                          className={`block px-3 py-2 rounded-lg text-sm transition-all ${active ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                          className={`block rounded-2xl px-3 py-2 text-sm transition ${active ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
                         >
                           {child.label}
                         </Link>
