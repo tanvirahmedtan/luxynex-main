@@ -111,7 +111,6 @@ export default function CheckoutPage() {
   const deliveryFee =
     form.deliveryZone === "inside_dhaka" ? INSIDE_DHAKA_FEE : OUTSIDE_DHAKA_FEE;
   const total = subtotal - discountAmount + deliveryFee;
-  const totalWeight = items.reduce((w, { quantity }) => w + quantity * 3, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -439,10 +438,6 @@ export default function CheckoutPage() {
 
               <div className="space-y-2.5 text-sm">
                 <SummaryRow label="Subtotal" value={`৳${subtotal.toFixed(1)}`} />
-                <SummaryRow
-                  label="Weight"
-                  value={`${totalWeight} Grams`}
-                />
                 <SummaryRow
                   label="Shipping"
                   value={`৳${deliveryFee.toFixed(2)}`}

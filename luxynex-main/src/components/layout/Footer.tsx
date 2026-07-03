@@ -60,8 +60,8 @@ export default function Footer() {
             <span className="text-lg font-bold tracking-wide text-white">LUXYNEX</span>
           </div>
           <p className="mb-4 text-sm text-white/70">
-            Glow. Scent. Style. — Your one-stop destination for premium
-            lifestyle products and trending gadgets.
+            Glow. Scent. Style. — Premium Perfumes, Attar & Smart Gadgets.<br />
+            Your One-Stop Destination for Premium Lifestyle Products & Trending Gadgets in Bangladesh.
           </p>
           <div className="flex gap-2">
             <a
@@ -200,9 +200,6 @@ export default function Footer() {
             </span>
             <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 font-medium">
               Nagad
-            </span>
-            <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 font-medium">
-              Rocket
             </span>
             <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 font-medium">
               COD

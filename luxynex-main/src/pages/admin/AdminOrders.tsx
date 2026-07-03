@@ -29,11 +29,13 @@ import {
   BadgeCheck,
   Copy,
   Eye,
+  FileText,
   ImageOff,
   Package,
   Trash2,
   Wallet,
 } from "lucide-react";
+import jsPDF from "jspdf";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -47,6 +49,21 @@ type OrderItem = {
   image?: string;
   color?: string;
   size?: string;
+  sku?: string;
+  variantInfo?: string;
+};
+
+type InvoiceRpcRow = {
+  invoice_html: string;
+  invoice_filename?: string | null;
+  order_number?: string | null;
+  customer_name?: string | null;
+  order_total?: number | null;
+};
+
+type InvoiceRpcResponse = {
+  data?: InvoiceRpcRow[] | InvoiceRpcRow | null;
+  error?: { message?: string } | null;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -79,10 +96,67 @@ const PAYMENT_STATUSES: PaymentStatus[] = [
   "Paid",
 ];
 
+const formatInvoiceCurrency = (value: unknown) =>
+  `BDT ${Number(value ?? 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const sanitizeDownloadName = (value: string) =>
+  value.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+const getInvoiceRow = (data: InvoiceRpcResponse["data"]) => {
+  if (Array.isArray(data)) return data[0] ?? null;
+  if (data && typeof data === "object") return data;
+  return null;
+};
+
+const getCleanString = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const parseVariantText = (value: unknown) => {
+  const text = getCleanString(value);
+  if (!text) return {};
+
+  const colorMatch = text.match(/(?:^|[|,])\s*(?:color|colour)\s*:\s*([^|,]+)/i);
+  const sizeMatch = text.match(/(?:^|[|,])\s*size\s*:\s*([^|,]+)/i);
+
+  return {
+    color: getCleanString(colorMatch?.[1]),
+    size: getCleanString(sizeMatch?.[1]),
+  };
+};
+
+const getVariantInfo = (item: OrderItem) =>
+  [
+    item.color ? `Color: ${item.color}` : null,
+    item.size ? `Size: ${item.size}` : null,
+    item.variantInfo,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
   const [savingPaymentStatus, setSavingPaymentStatus] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
   const fetchOrders = async () => {
     const { data } = await supabase
@@ -160,33 +234,74 @@ export default function AdminOrders() {
 
   const selectedItems = useMemo<OrderItem[]>(() => {
     if (!selected) return [];
-    const raw = (selected as any).items ?? (selected as any).cart_items ??
-      ((selected as any).payment_details as any)?.cart_items ?? [];
+    const raw = (() => {
+      try {
+        const orderRecord = selected as unknown as Record<string, unknown>;
+        const paymentDetails =
+          orderRecord.payment_details &&
+          typeof orderRecord.payment_details === "object" &&
+          !Array.isArray(orderRecord.payment_details)
+            ? (orderRecord.payment_details as Record<string, unknown>)
+            : {};
+
+        return (
+          orderRecord.items ??
+          orderRecord.cart_items ??
+          paymentDetails?.cart_items ??
+          []
+        );
+      } catch (err) {
+        console.error("Failed to parse order items for invoice", err);
+        return [];
+      }
+    })();
     const items = parseOrderItems(raw);
 
     return items.map((item) => {
       const record = item as Record<string, unknown>;
+      const variantInfoRecord =
+        record.variant_info &&
+        typeof record.variant_info === "object" &&
+        !Array.isArray(record.variant_info)
+          ? (record.variant_info as Record<string, unknown>)
+          : {};
+      const selectedVariant =
+        record.selected_variant ?? record.selectedVariant ?? record.variant;
+      const parsedSelectedVariant = parseVariantText(selectedVariant);
+      const parsedVariantInfo = parseVariantText(record.variant_info);
+      const variantInfoText = getCleanString(record.variant_info);
+      const color =
+        getCleanString(record.color) ??
+        getCleanString(record.selected_color) ??
+        getCleanString(record.selectedColor) ??
+        getCleanString(record.variant_color) ??
+        getCleanString(record.variantColor) ??
+        getCleanString(variantInfoRecord.color) ??
+        getCleanString(variantInfoRecord.colour) ??
+        parsedSelectedVariant.color ??
+        parsedVariantInfo.color;
+      const size =
+        getCleanString(record.size) ??
+        getCleanString(record.selected_size) ??
+        getCleanString(record.selectedSize) ??
+        getCleanString(record.variant_size) ??
+        getCleanString(record.variantSize) ??
+        getCleanString(variantInfoRecord.size) ??
+        parsedSelectedVariant.size ??
+        parsedVariantInfo.size;
+
       return {
         name: typeof record.name === "string" ? record.name : "Unnamed item",
         price: Number(record.price ?? record.unit_price ?? 0),
         quantity: Number(record.quantity ?? record.qty ?? 0),
         image: typeof record.image === "string" ? record.image : undefined,
-        color:
-          typeof record.color === "string"
-            ? record.color
-            : typeof record.selected_color === "string"
-              ? record.selected_color
-              : typeof record.variant_color === "string"
-                ? record.variant_color
-                : undefined,
-        size:
-          typeof record.size === "string"
-            ? record.size
-            : typeof record.selected_size === "string"
-              ? record.selected_size
-              : typeof record.variant_size === "string"
-                ? record.variant_size
-                : undefined,
+        color,
+        size,
+        sku: getCleanString(record.sku) ?? getCleanString(record.product_sku),
+        variantInfo:
+          !color && !size
+            ? variantInfoText ?? getCleanString(selectedVariant)
+            : undefined,
       };
     });
   }, [selected]);
@@ -246,6 +361,264 @@ export default function AdminOrders() {
 
   const markPaidAndApprove = async () => {
     await updatePaymentStatus("Paid");
+  };
+
+  const buildInvoicePdfBlob = (
+    invoice: InvoiceRpcRow,
+    order: Order,
+    items: OrderItem[],
+    paymentStatus: PaymentStatus,
+  ) => {
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const margin = 16;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const addWrappedText = (
+      text: string,
+      x: number,
+      currentY: number,
+      maxWidth: number,
+      lineHeight = 5,
+    ) => {
+      const lines = pdf.splitTextToSize(text, maxWidth);
+      pdf.text(lines, x, currentY);
+      return currentY + lines.length * lineHeight;
+    };
+
+    const ensureSpace = (height: number) => {
+      if (y + height <= pageHeight - margin) return;
+      pdf.addPage();
+      y = margin;
+    };
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(20);
+    pdf.text("LUXYNEX", margin, y);
+    pdf.setFontSize(18);
+    pdf.text("INVOICE", pageWidth - margin, y, { align: "right" });
+
+    y += 8;
+    pdf.setDrawColor(34, 34, 34);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 12;
+
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Invoice Details", margin, y);
+    y += 7;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Invoice #: ${invoice?.order_number || order?.order_number || order?.id}`, margin, y);
+    pdf.text(`Date: ${new Date(order?.created_at || Date.now()).toLocaleString()}`, pageWidth - margin, y, {
+      align: "right",
+    });
+    y += 6;
+    pdf.text(`Order ID: ${order?.id || ""}`, margin, y);
+    y += 6;
+    pdf.text(`Payment Status: ${paymentStatus}`, margin, y);
+    y += 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Bill To", margin, y);
+    y += 7;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.text(invoice?.customer_name || order?.customer_name || "Customer", margin, y);
+    y += 6;
+    pdf.text(`Phone: ${order?.customer_phone || ""}`, margin, y);
+    y += 6;
+    y = addWrappedText(`Address: ${order?.shipping_address || ""}`, margin, y, contentWidth);
+    y += 6;
+
+    ensureSpace(24);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Items", margin, y);
+    y += 7;
+
+    pdf.setFillColor(245, 245, 245);
+    pdf.rect(margin, y - 5, contentWidth, 8, "F");
+    pdf.setFontSize(9);
+    const productX = margin + 2;
+    const productWidth = 70;
+    const variantX = margin + 76;
+    const variantWidth = 42;
+    const qtyX = margin + 122;
+    const unitX = margin + 138;
+    const totalX = pageWidth - margin - 2;
+
+    pdf.text("Product", productX, y);
+    pdf.text("Variant", variantX, y);
+    pdf.text("Qty", qtyX, y);
+    pdf.text("Unit", unitX, y);
+    pdf.text("Total", totalX, y, { align: "right" });
+    y += 7;
+
+    pdf.setFont("helvetica", "normal");
+    items.forEach((item) => {
+      const productLines = pdf.splitTextToSize(
+        item?.name || "Unnamed item",
+        productWidth,
+      );
+      const variantText = getVariantInfo(item);
+      const variantLines = variantText
+        ? pdf.splitTextToSize(variantText, variantWidth)
+        : ["Standard"];
+      const rowHeight =
+        Math.max(productLines.length, variantLines.length, 1) * 4 + 4;
+      ensureSpace(rowHeight + 2);
+
+      const itemPrice = Number(item?.price ?? 0);
+      const itemQuantity = Number(item?.quantity ?? 0);
+      const itemTotal = itemPrice * itemQuantity;
+      pdf.text(productLines, productX, y);
+      if (!variantText) {
+        pdf.setTextColor(95, 95, 95);
+      }
+      pdf.text(variantLines, variantX, y);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(String(itemQuantity), qtyX, y);
+      pdf.text(formatInvoiceCurrency(itemPrice), unitX, y);
+      pdf.text(formatInvoiceCurrency(itemTotal), totalX, y, {
+        align: "right",
+      });
+      y += rowHeight;
+    });
+
+    if (items.length === 0) {
+      pdf.text("No item data found in this order.", margin + 2, y);
+      y += 8;
+    }
+
+    y += 6;
+    ensureSpace(34);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    const totalsX = pageWidth - margin - 2;
+    pdf.setFontSize(10);
+    pdf.text("Subtotal:", margin, y);
+    pdf.text(formatInvoiceCurrency(order?.subtotal), totalsX, y, { align: "right" });
+    y += 6;
+    pdf.text("Delivery:", margin, y);
+    pdf.text(formatInvoiceCurrency(order?.shipping_fee), totalsX, y, { align: "right" });
+    y += 6;
+    pdf.text("Total:", margin, y);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(formatInvoiceCurrency(invoice?.order_total ?? order?.total), totalsX, y, {
+      align: "right",
+    });
+    y += 14;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    y = addWrappedText("Thank you for your business. For inquiries, contact support@luxynex.com.", margin, y, contentWidth);
+
+    if (invoice?.invoice_html) {
+      pdf.setProperties({
+        title: `Invoice ${invoice?.order_number || order?.order_number || order?.id}`,
+        subject: "Generated from public.generate_order_invoice",
+      });
+    }
+
+    return pdf.output("blob");
+  };
+
+  const buildInvoiceJsonBlob = (
+    invoice: InvoiceRpcRow,
+    order: Order,
+    items: OrderItem[],
+    paymentStatus: PaymentStatus,
+  ) =>
+    new Blob(
+      [
+        JSON.stringify(
+          {
+            invoice: invoice ?? {},
+            order: {
+              id: order?.id,
+              order_number: order?.order_number,
+              customer_name: order?.customer_name,
+              customer_phone: order?.customer_phone,
+              shipping_address: order?.shipping_address,
+              subtotal: order?.subtotal,
+              shipping_fee: order?.shipping_fee,
+              total: order?.total,
+              payment_status: paymentStatus,
+              created_at: order?.created_at,
+            },
+            items: items ?? [],
+            generated_at: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      ],
+      { type: "application/json" },
+    );
+
+  const generateInvoice = async () => {
+    const order = selected;
+    if (!order?.id) {
+      const message = "No order is selected for invoice generation.";
+      toast.error(message);
+      window.alert(message);
+      return;
+    }
+
+    const items = Array.isArray(selectedItems) ? selectedItems : [];
+    const paymentStatus = selectedPaymentStatus || "Unpaid";
+
+    setGeneratingInvoice(true);
+    
+    try {
+      const response = (await supabase.rpc("generate_order_invoice" as never, {
+        p_order_id: order.id,
+      } as never)) as InvoiceRpcResponse | undefined;
+      const error = response?.error ?? null;
+      const data = response?.data ?? null;
+
+      if (error) {
+        const message =
+          "Failed to generate invoice: " +
+          (error?.message || "Supabase returned an unknown error.");
+        toast.error(message);
+        window.alert(message);
+        return;
+      }
+
+      const invoice = getInvoiceRow(data);
+      if (!invoice) {
+        const message =
+          "No invoice data was returned from Supabase. Please verify this order exists and try again.";
+        toast.error(message);
+        window.alert(message);
+        return;
+      }
+
+      try {
+        const blob = buildInvoicePdfBlob(invoice, order, items, paymentStatus);
+        const filename = sanitizeDownloadName(`invoice_${order.id}.pdf`);
+        downloadBlob(blob, filename);
+        toast.success("Invoice PDF downloaded successfully");
+      } catch (pdfError) {
+        console.error("PDF invoice generation failed; downloading JSON fallback.", pdfError);
+        const fallbackBlob = buildInvoiceJsonBlob(invoice, order, items, paymentStatus);
+        const fallbackFilename = sanitizeDownloadName(`invoice_${order.id}.json`);
+        downloadBlob(fallbackBlob, fallbackFilename);
+        toast.success("Invoice data downloaded as JSON");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "The invoice download failed.";
+      toast.error("Error generating invoice: " + message);
+      window.alert("Error generating invoice: " + message);
+      console.error(err);
+    } finally {
+      setGeneratingInvoice(false);
+    }
   };
 
   return (
@@ -483,6 +856,21 @@ export default function AdminOrders() {
                       <span className="text-slate-400">Date:</span>{" "}
                       {new Date(selected.created_at).toLocaleString()}
                     </div>
+                    {selectedItems.length > 0 && (
+                      <div className="border-t border-white/10 pt-3">
+                        <p className="mb-2 text-xs font-semibold uppercase text-slate-300">Products:</p>
+                        <div className="space-y-1 text-xs">
+                          {selectedItems.map((item, idx) => (
+                            <div key={idx} className="text-slate-300">
+                              {item.sku && <span className="font-semibold text-slate-100">{item.sku}</span>}
+                              {item.sku && " - "}
+                              {item.name}
+                              {item.quantity > 1 && ` (x${item.quantity})`}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {selected.notes && (
                       <div className="rounded-xl border border-white/10 bg-slate-900/70 p-4 text-slate-200">
                         <span className="text-slate-400">Note:</span>{" "}
@@ -522,6 +910,7 @@ export default function AdminOrders() {
                             <div>
                               <p className="font-semibold text-white">{item.name}</p>
                               <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-300">
+                                {item.sku && <span>SKU: {item.sku}</span>}
                                 <span>Qty: {item.quantity}</span>
                                 {item.color && <span>Color: {item.color}</span>}
                                 {item.size && <span>Size: {item.size}</span>}
@@ -571,6 +960,15 @@ export default function AdminOrders() {
                 >
                   <BadgeCheck className="h-4 w-4" />
                   {savingPaymentStatus ? "Updating..." : "Mark as Paid & Approve"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => generateInvoice()}
+                  disabled={generatingInvoice}
+                  className="gap-2 border-blue-500/30 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+                >
+                  <FileText className="h-4 w-4" />
+                  {generatingInvoice ? "Generating..." : "Generate Invoice"}
                 </Button>
                 <Button
                   variant="destructive"

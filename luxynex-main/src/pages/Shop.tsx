@@ -128,7 +128,7 @@ export default function Shop() {
                 <X className="w-4 h-4" />
               </button>
             )}
-            <div className="light-card p-5 space-y-6">
+            <div className="light-card p-5 space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto">
               <div className="flex items-center gap-2 pb-3 border-b border-border">
                 <LayoutGrid className="w-4 h-4 text-primary" />
                 <h4 className="text-sm font-bold">Filters</h4>
@@ -174,19 +174,25 @@ export default function Shop() {
                     Price Range
                   </h4>
                 </div>
-                <Slider
-                  min={0}
-                  max={100000}
-                  step={500}
-                  value={priceRange}
-                  onValueChange={(v) =>
-                    setPriceRange([v[0], v[1]] as [number, number])
-                  }
-                  className="mt-2"
-                />
-                <div className="flex justify-between mt-3 text-xs text-muted-foreground">
-                  <span>৳{priceRange[0].toLocaleString()}</span>
-                  <span>৳{priceRange[1].toLocaleString()}</span>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setPriceRange([1, 1000])}
+                    className={`block w-full text-left text-sm px-3 py-2 rounded-lg mb-1 ${priceRange[0] === 1 && priceRange[1] === 1000 ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    ৳1 - ৳1,000
+                  </button>
+                  <button
+                    onClick={() => setPriceRange([1000, 10000])}
+                    className={`block w-full text-left text-sm px-3 py-2 rounded-lg mb-1 ${priceRange[0] === 1000 && priceRange[1] === 10000 ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    ৳1,000 - ৳10,000
+                  </button>
+                  <button
+                    onClick={() => setPriceRange([10000, 100000])}
+                    className={`block w-full text-left text-sm px-3 py-2 rounded-lg mb-1 ${priceRange[0] === 10000 && priceRange[1] === 100000 ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    ৳10,000 - ৳100,000
+                  </button>
                 </div>
               </div>
 
@@ -221,33 +227,6 @@ export default function Shop() {
                 </RadioGroup>
               </div>
 
-              {/* Categories */}
-              <div>
-                <h4 className="text-sm font-semibold mb-2 text-foreground">
-                  Category
-                </h4>
-                <button
-                  onClick={() => {
-                    setSelectedCat("");
-                    setSelectedSub("");
-                  }}
-                  className={`block w-full text-left text-sm px-3 py-2 rounded-xl mb-1 ${!selectedCat ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  All
-                </button>
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      setSelectedCat(c.id);
-                      setSelectedSub("");
-                    }}
-                    className={`block w-full text-left text-sm px-3 py-2 rounded-xl mb-1 ${selectedCat === c.id ? "bg-primary/10 text-primary font-semibold" : "text-muted-foreground hover:bg-muted"}`}
-                  >
-                    {c.icon} {c.name}
-                  </button>
-                ))}
-              </div>
               {currentCategory && (
                 <div>
                   <h4 className="text-sm font-semibold mb-2 text-foreground">

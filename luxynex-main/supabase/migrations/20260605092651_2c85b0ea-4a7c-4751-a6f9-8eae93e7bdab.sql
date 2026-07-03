@@ -26,6 +26,10 @@ DECLARE
   v_items jsonb := '[]'::jsonb;
   v_order_number text;
   v_id uuid;
+  v_selected_variant text;
+  v_color text;
+  v_size text;
+  v_item_obj jsonb;
 BEGIN
   IF p_customer_name IS NULL OR length(trim(p_customer_name)) = 0 THEN
     RAISE EXCEPTION 'Customer name required';
@@ -51,10 +55,12 @@ BEGIN
   FOR item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
     pid := NULLIF(item->>'product_id','')::uuid;
     qty := COALESCE((item->>'quantity')::int, 0);
+    v_selected_variant := NULLIF(item->>'selected_variant', '')::text;
+    
     IF pid IS NULL OR qty <= 0 THEN
       RAISE EXCEPTION 'Invalid cart item';
     END IF;
-    SELECT id, name, price, sale_price, stock, images
+    SELECT id, name, price, sale_price, stock, images, thumbnail
       INTO prod FROM public.admin_products WHERE id = pid;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Product not found: %', pid;
@@ -62,15 +68,53 @@ BEGIN
     IF prod.stock < qty THEN
       RAISE EXCEPTION 'Insufficient stock for %', prod.name;
     END IF;
+    
     unit_price := COALESCE(NULLIF(prod.sale_price,0), prod.price);
     v_subtotal := v_subtotal + (unit_price * qty);
-    v_items := v_items || jsonb_build_array(jsonb_build_object(
+    
+    -- Parse selected_variant string to extract color and size
+    -- Format: "Color: White | Size: M" or just "Color: White" or "Size: M"
+    v_color := NULL;
+    v_size := NULL;
+    
+    IF v_selected_variant IS NOT NULL THEN
+      -- Extract color: match "Color: <value>"
+      v_color := (regexp_matches(v_selected_variant, 'Color:\s*([^|]+)', 'g'))[1];
+      IF v_color IS NOT NULL THEN
+        v_color := trim(v_color);
+        IF v_color = '' THEN v_color := NULL; END IF;
+      END IF;
+      
+      -- Extract size: match "Size: <value>"
+      v_size := (regexp_matches(v_selected_variant, 'Size:\s*([^|]+)', 'g'))[1];
+      IF v_size IS NOT NULL THEN
+        v_size := trim(v_size);
+        IF v_size = '' THEN v_size := NULL; END IF;
+      END IF;
+    END IF;
+    
+    v_item_obj := jsonb_build_object(
       'product_id', prod.id,
       'name', prod.name,
       'price', unit_price,
       'quantity', qty,
-      'image', COALESCE(prod.images[1], '')
-    ));
+      'image', COALESCE(prod.thumbnail, prod.images[1], '')
+    );
+    
+    -- Add color and size if they exist (locked at purchase time)
+    IF v_color IS NOT NULL THEN
+      v_item_obj := v_item_obj || jsonb_build_object('color', v_color);
+    END IF;
+    IF v_size IS NOT NULL THEN
+      v_item_obj := v_item_obj || jsonb_build_object('size', v_size);
+    END IF;
+    
+    v_items := v_items || jsonb_build_array(v_item_obj);
+    
+    -- DECREMENT STOCK: Update product stock after validation
+    UPDATE public.admin_products
+    SET stock = stock - qty, updated_at = now()
+    WHERE id = pid;
   END LOOP;
 
   v_discount := round(v_subtotal * p_promo_discount_percent / 100.0);

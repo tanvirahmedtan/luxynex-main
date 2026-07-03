@@ -214,7 +214,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 mt-6">
                 <div className="grid gap-3">
                   <Button asChild size="sm" className="w-full">
                     <Link to="/wishlist">View wishlist</Link>

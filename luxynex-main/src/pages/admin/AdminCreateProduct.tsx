@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,6 +70,8 @@ export default function AdminCreateProduct() {
   const [saving, setSaving] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingSlider, setUploadingSlider] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const sliderInputRef = useRef<HTMLInputElement>(null);
 
   // Product Info
   const [name, setName] = useState("");
@@ -266,10 +268,54 @@ export default function AdminCreateProduct() {
   const handleThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+
+    // Validate file type
+    const validTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    if (!validTypes.includes(f.type)) {
+      toast.error("Invalid file type. Please upload PNG, JPG, JPEG, SVG, or WEBP");
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (f.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 5MB");
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+      return;
+    }
+
     setUploadingThumb(true);
     const url = await uploadFile(f);
-    if (url) setThumbnail(url);
+    if (url) {
+      setThumbnail(url);
+      toast.success("Thumbnail uploaded successfully");
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+    } else {
+      toast.error("Failed to upload thumbnail");
+    }
     setUploadingThumb(false);
+  };
+
+  const handleRemoveThumbnail = async () => {
+    try {
+      if (isEdit && id && thumbnail) {
+        // If editing and thumbnail exists, update database to remove it
+        const { error } = await supabase
+          .from("admin_products")
+          .update({ thumbnail: null })
+          .eq("id", id);
+        if (error) {
+          toast.error("Failed to remove thumbnail: " + error.message);
+          return;
+        }
+      }
+      setThumbnail("");
+      if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+      toast.success("Thumbnail removed");
+    } catch (error) {
+      console.error("Error removing thumbnail:", error);
+      toast.error("Error removing thumbnail");
+    }
   };
 
   const handleSlider = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -608,12 +654,11 @@ export default function AdminCreateProduct() {
                         Add
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-2">
                       {searchTags.map((t, i) => (
                         <Badge
                           key={i}
-                          variant="secondary"
-                          className="cursor-pointer"
+                          className="cursor-pointer bg-white text-foreground border border-gray-200 hover:bg-gray-50 max-w-[150px] truncate px-2 py-1 text-xs"
                           onClick={() =>
                             setSearchTags(searchTags.filter((_, j) => j !== i))
                           }
@@ -916,25 +961,27 @@ export default function AdminCreateProduct() {
                     />
                     <button
                       type="button"
-                      onClick={() => setThumbnail("")}
-                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center"
+                      onClick={handleRemoveThumbnail}
+                      disabled={uploadingThumb}
+                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center hover:bg-destructive/90 disabled:opacity-50"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                  <label className="flex flex-col items-center justify-center w-full aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors disabled:opacity-50">
                     <Upload className="w-7 h-7 text-muted-foreground mb-2" />
-                    <span className="text-sm text-muted-foreground">
-                      {uploadingThumb ? "Uploading..." : "Drop thumbnail here"}
+                    <span className="text-sm text-muted-foreground font-medium">
+                      {uploadingThumb ? "Uploading..." : "Click to upload or drag & drop"}
                     </span>
                     <span className="text-xs text-muted-foreground/70 mt-1">
-                      png, jpg, jpeg, svg, webp
+                      PNG, JPG, JPEG, SVG, WEBP (Max 5MB)
                     </span>
                     <input
+                      ref={thumbnailInputRef}
                       type="file"
                       className="hidden"
-                      accept=".png,.jpg,.jpeg,.svg,.webp"
+                      accept=".png,.jpg,.jpeg,.svg,.webp,image/png,image/jpeg,image/webp,image/svg+xml"
                       onChange={handleThumbnail}
                       disabled={uploadingThumb}
                     />
