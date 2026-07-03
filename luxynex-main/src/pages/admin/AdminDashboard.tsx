@@ -4,6 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AreaChart,
   Area,
   XAxis,
@@ -24,10 +30,13 @@ import {
   Eye,
   BarChart3,
   Tag,
+  ChevronDown,
+  FileText,
 } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import jsPDF from "jspdf";
 
 type Product = Tables<"admin_products">;
 type Order = Tables<"admin_orders">;
@@ -173,6 +182,196 @@ export default function AdminDashboard() {
     [recentProducts, search],
   );
 
+  const handleExportReport = () => {
+    // Create CSV content
+    let csvContent = "LUXYNEX ADMIN DASHBOARD REPORT\n";
+    csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+
+    // Dashboard Statistics
+    csvContent += "=== DASHBOARD STATISTICS ===\n";
+    csvContent += `Total Revenue,৳${stats.revenue.toLocaleString()}\n`;
+    csvContent += `Total Orders,${stats.orders}\n`;
+    csvContent += `Total Products,${stats.products}\n`;
+    csvContent += `Total Customers,${stats.customers}\n`;
+    csvContent += `Pending Orders,${stats.pendingOrders}\n`;
+    csvContent += `Today's Orders,${stats.todayOrders}\n`;
+    csvContent += `Total Visitors,${totalVisitors}\n`;
+    csvContent += `Product Views,${productSeen}\n`;
+    csvContent += `Conversion Rate,${conversionRate}%\n\n`;
+
+    // Chart Data - Sales & Revenue Trend
+    csvContent += "=== 7-DAY SALES & REVENUE TREND ===\n";
+    csvContent += "Day,Revenue (৳),Orders\n";
+    chartData.forEach((data) => {
+      csvContent += `${data.day},${data.revenue},${data.orders}\n`;
+    });
+    csvContent += "\n";
+
+    // Recent Products
+    csvContent += "=== RECENT PRODUCTS ===\n";
+    csvContent += "ID,Product Name,Price (৳),Stock,Category,Active\n";
+    recentProducts.forEach((product) => {
+      csvContent += `${product.id},"${product.name}",${product.price},${product.stock},"${product.category}",${product.is_active ? "Yes" : "No"}\n`;
+    });
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `luxynex-report-${new Date().getTime()}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPosition = margin;
+
+      // Header
+      doc.setFillColor(13, 110, 253);
+      doc.rect(0, 0, pageWidth, 30, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont(undefined, "bold");
+      doc.text("LUXYNEX", margin, 20);
+      doc.setFontSize(10);
+      doc.text("Admin Dashboard Report", margin, 27);
+
+      // Reset text color
+      doc.setTextColor(0, 0, 0);
+      yPosition = 40;
+
+      // Report Date
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`Generated: ${new Date().toLocaleString()}`, margin, yPosition);
+      yPosition += 10;
+
+      // Dashboard Statistics
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("DASHBOARD STATISTICS", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, "normal");
+      const stats_data = [
+        [`Total Revenue:`, `৳${stats.revenue.toLocaleString()}`],
+        [`Total Orders:`, `${stats.orders}`],
+        [`Total Products:`, `${stats.products}`],
+        [`Total Customers:`, `${stats.customers}`],
+        [`Pending Orders:`, `${stats.pendingOrders}`],
+        [`Today's Orders:`, `${stats.todayOrders}`],
+        [`Total Visitors:`, `${totalVisitors}`],
+        [`Product Views:`, `${productSeen}`],
+        [`Conversion Rate:`, `${conversionRate}%`],
+      ];
+
+      stats_data.forEach(([label, value]) => {
+        doc.text(label, margin, yPosition);
+        doc.text(value, pageWidth - margin - 30, yPosition, { align: "right" });
+        yPosition += 5;
+      });
+
+      yPosition += 5;
+
+      // Check if we need a new page
+      if (yPosition > pageHeight - 40) {
+        doc.addPage();
+        yPosition = margin;
+      }
+
+      // 7-Day Trend
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("7-DAY SALES & REVENUE TREND", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, "normal");
+      doc.text("Day", margin, yPosition);
+      doc.text("Revenue (৳)", margin + 60, yPosition);
+      doc.text("Orders", margin + 110, yPosition);
+      yPosition += 5;
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 3;
+
+      chartData.forEach((data) => {
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = margin;
+        }
+        doc.text(data.day, margin, yPosition);
+        doc.text(data.revenue.toString(), margin + 60, yPosition);
+        doc.text(data.orders.toString(), margin + 110, yPosition);
+        yPosition += 4;
+      });
+
+      yPosition += 5;
+
+      // Check if we need a new page for products
+      if (yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = margin;
+      }
+
+      // Recent Products Table
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.text("RECENT PRODUCTS", margin, yPosition);
+      yPosition += 8;
+
+      doc.setFontSize(8);
+      doc.setFont(undefined, "bold");
+      doc.text("Product Name", margin, yPosition);
+      doc.text("Price", margin + 80, yPosition);
+      doc.text("Stock", margin + 110, yPosition);
+      doc.text("Category", margin + 135, yPosition);
+      yPosition += 4;
+
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 3;
+
+      doc.setFont(undefined, "normal");
+      recentProducts.slice(0, 10).forEach((product) => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = margin;
+        }
+
+        const productName = product.name || "N/A";
+        const truncatedName = productName.length > 30 ? productName.substring(0, 27) + "..." : productName;
+
+        doc.text(truncatedName, margin, yPosition);
+        doc.text(`৳${product.price || 0}`, margin + 80, yPosition);
+        doc.text(`${product.stock || 0}`, margin + 110, yPosition);
+        doc.text(product.category || "N/A", margin + 135, yPosition);
+        yPosition += 4;
+      });
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(`© Luxynex. Report generated on ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+
+      // Save PDF
+      doc.save(`luxynex-report-${new Date().getTime()}.pdf`);
+    } catch (error) {
+      console.error("PDF export error:", error);
+      alert("Error generating PDF. Please try again.");
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -187,9 +386,23 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" size="sm">
-              Export report
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export report
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportReport}>
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  Export as PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button size="sm">Create new order</Button>
           </div>
         </div>

@@ -8,7 +8,7 @@ function mapRow(p: any): Product {
     name: p.name,
     price: Number(p.price),
     originalPrice: p.original_price ? Number(p.original_price) : undefined,
-    image: p.images && p.images.length > 0 ? p.images[0] : "/placeholder.svg",
+    image: p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : "/placeholder.svg"),
     category: (p.category || "").toLowerCase(),
     subcategory: p.category || "",
     badge:

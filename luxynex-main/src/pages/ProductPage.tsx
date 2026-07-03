@@ -454,15 +454,11 @@ export default function ProductPage() {
             </div>
 
             {/* Coupons */}
-            <div className="light-card rounded-2xl p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Tag className="w-4 h-4 text-primary" /> Available Coupons
-              </div>
-              {coupons.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No active coupons right now.
-                </p>
-              ) : (
+            {coupons.length > 0 && (
+              <div className="light-card rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Tag className="w-4 h-4 text-primary" /> Available Coupons
+                </div>
                 <div className="space-y-2">
                   {coupons.map((c) => (
                     <div
@@ -494,8 +490,8 @@ export default function ProductPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Trust badges */}
             <div className="grid grid-cols-3 gap-2 pt-2">
