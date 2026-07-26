@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import RequireAuth from "@/components/RequireAuth";
 import Layout from "@/components/layout/Layout";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import { Analytics } from "@vercel/analytics/react";
 import Index from "./pages/Index";
 const Shop = lazy(() => import("./pages/Shop"));
 const ProductPage = lazy(() => import("./pages/ProductPage"));
@@ -64,6 +65,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <PWAInstallBanner />
+            <Analytics />
             <BrowserRouter>
               <Suspense fallback={<div className="min-h-[60vh]" />}>
                 <Routes>
