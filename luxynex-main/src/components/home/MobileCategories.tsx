@@ -9,28 +9,28 @@ export default function MobileCategories() {
   if (!isMobile || loading || categories.length === 0) return null;
 
   return (
-    <section className="px-4 mb-6">
-      <h2 className="text-lg font-bold text-foreground mb-3">CATEGORIES</h2>
-      <div className="overflow-x-auto scrollbar-hide pb-2">
-        <div className="grid grid-cols-4 grid-rows-2 gap-3 w-max">
+    <section className="mb-6 px-4">
+      <h2 className="mb-3 text-lg font-bold text-foreground">CATEGORIES</h2>
+      <div className="overflow-x-auto pb-2 scrollbar-hide">
+        <div className="grid w-max auto-rows-[128px] grid-flow-col grid-rows-2 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.id}
               to={`/shop?cat=${cat.slug}`}
-              className="flex flex-col items-center p-3 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              className="flex h-full w-[76px] flex-col items-center justify-start overflow-hidden rounded-lg border border-gray-100 bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md sm:w-[84px]"
             >
-              <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mb-2">
+              <div className="mb-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 sm:h-14 sm:w-14">
                 {cat.image_url ? (
                   <img
                     src={cat.image_url}
                     alt={cat.name}
-                    className="w-10 h-10 rounded-full object-cover"
+                    className="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
                   />
                 ) : (
-                  <span className="text-2xl">{cat.icon}</span>
+                  <span className="text-xl sm:text-2xl">{cat.icon}</span>
                 )}
               </div>
-              <span className="text-xs font-medium text-gray-700 text-center line-clamp-2">
+              <span className="line-clamp-2 w-full text-center text-[11px] font-medium leading-tight text-gray-700 sm:text-xs">
                 {cat.name}
               </span>
             </Link>

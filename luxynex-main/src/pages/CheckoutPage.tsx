@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useCart } from "@/contexts/CartContext";
+import { parseVariantSelection, useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -39,6 +39,11 @@ type PendingOrderItem = {
   price: number;
   name: string;
   selected_variant?: string | null;
+  selected_color?: string | null;
+  selected_size?: string | null;
+  product_image?: string | null;
+  sku?: string | null;
+  subtotal?: number;
 };
 
 type PendingOrderPayload = {
@@ -73,6 +78,26 @@ type CheckoutForm = {
   deliveryZone: DeliveryZone;
   payment: PaymentMethod;
   onlinePaymentType: OnlinePaymentType;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "string" && error.trim()) {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+
+    const details = (error as { details?: unknown }).details;
+    if (typeof details === "string" && details.trim()) {
+      return details;
+    }
+  }
+
+  return fallback;
 };
 
 export default function CheckoutPage() {
@@ -111,6 +136,7 @@ export default function CheckoutPage() {
   const deliveryFee =
     form.deliveryZone === "inside_dhaka" ? INSIDE_DHAKA_FEE : OUTSIDE_DHAKA_FEE;
   const total = subtotal - discountAmount + deliveryFee;
+  const isCartEmpty = items.length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +157,7 @@ export default function CheckoutPage() {
       toast.error("Address looks too short");
       return;
     }
-    if (items.length === 0) {
+    if (isCartEmpty) {
       toast.error("Your cart is empty");
       return;
     }
@@ -145,114 +171,171 @@ export default function CheckoutPage() {
     let appliedDiscountAmount = discountAmount;
     let validatedPromoCode = appliedCoupon?.code || promoCode.trim().toUpperCase();
 
-    if (validatedPromoCode) {
-      const { data: couponData, error: couponError } = (await supabase.rpc(
-        "validate_coupon_code",
-        {
-          p_code: validatedPromoCode,
-          p_subtotal: subtotal,
-        },
-      )) as ValidateCouponResponse;
+    setLoading(true);
+    console.log("[checkout] Checkout started", {
+      payment: form.payment,
+      itemCount: items.length,
+    });
 
-      if (couponError) {
-        toast.error(getErrorMessage(couponError, "Failed to validate coupon."));
-        return;
+    try {
+      console.log("[checkout] Validation passed", {
+        fullName,
+        phone: normalizedPhone,
+        address,
+        city,
+      });
+
+      if (validatedPromoCode) {
+        const { data: couponData, error: couponError } = (await supabase.rpc(
+          "validate_coupon_code",
+          {
+            p_code: validatedPromoCode,
+            p_subtotal: subtotal,
+          },
+        )) as ValidateCouponResponse;
+
+        if (couponError) {
+          throw new Error(getErrorMessage(couponError, "Failed to validate coupon."));
+        }
+
+        const validation = Array.isArray(couponData)
+          ? (couponData[0] as CouponValidationResult | null)
+          : null;
+        if (!validation?.is_valid) {
+          throw new Error(validation?.message || "Invalid coupon code");
+        }
+
+        appliedDiscountAmount = Number(validation.final_discount_amount || 0);
+        validatedPromoCode = String(validation.code || validatedPromoCode).toUpperCase();
       }
 
-      const validation = Array.isArray(couponData)
-        ? (couponData[0] as CouponValidationResult | null)
-        : null;
-      if (!validation?.is_valid) {
-        toast.error(validation?.message || "Invalid coupon code");
-        return;
-      }
+      const deliveryLabel =
+        form.deliveryZone === "inside_dhaka" ? "Inside Dhaka" : "Outside Dhaka";
+      const paymentLabel = form.payment === "cod" ? "Cash on Delivery" : "Online Payment";
 
-      appliedDiscountAmount = Number(validation.final_discount_amount || 0);
-      validatedPromoCode = String(validation.code || validatedPromoCode).toUpperCase();
-    }
+      const orderPayload = {
+        p_customer_name: fullName,
+        p_customer_phone: normalizedPhone,
+        p_customer_email: user?.email || null,
+        p_shipping_address: `${address}, ${city}`,
+        p_items: items.map((i) => {
+          const { normalizedColor, normalizedSize } = parseVariantSelection(
+            i.selectedVariant,
+            i.selectedColor,
+            i.selectedSize,
+          );
 
-    if (form.payment !== "cod") {
-      const pendingOrder: PendingOrderPayload = {
-        items: items.map((i) => ({
-          product_id: i.product.id,
-          quantity: i.quantity,
-          price: i.product.price,
-          name: i.product.name,
-          selected_variant: i.selectedVariant ?? null,
-        })),
-        customer_name: fullName,
-        customer_phone: normalizedPhone,
-        customer_email: user?.email || null,
-        shipping_address: `${address}, ${city}`,
-        subtotal,
-        shipping_fee: deliveryFee,
-        discount: appliedDiscountAmount,
-        total,
-        notes: [
+          return {
+            product_id: i.product.id,
+            quantity: i.quantity,
+            selected_variant: i.selectedVariant ?? null,
+            selected_color: normalizedColor,
+            selected_size: normalizedSize,
+            product_name: i.product.name,
+            unit_price: i.product.price,
+            subtotal: Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
+            product_image: i.product.image ?? null,
+            sku: i.product.sku ?? null,
+          };
+        }),
+        p_shipping_fee: deliveryFee,
+        p_promo_discount_percent:
+          subtotal > 0 ? (appliedDiscountAmount / subtotal) * 100 : 0,
+        // Map client-side payment selection to database enum values.
+        // The DB enum is ('cod','bkash','nagad','rocket'), so default online to 'bkash'.
+        p_payment_method: form.payment === "cod" ? "cod" : "bkash",
+        p_notes: [
           validatedPromoCode ? `Coupon: ${validatedPromoCode}` : null,
-          `Delivery Zone: ${form.deliveryZone === "inside_dhaka" ? "Inside Dhaka" : "Outside Dhaka"}`,
-          form.onlinePaymentType === "shipping_only"
-            ? `Amount due now: ৳${deliveryFee}`
-            : null,
+          `Delivery Zone: ${deliveryLabel}`,
+          `Payment: ${paymentLabel}`,
         ]
           .filter(Boolean)
           .join(" | "),
-        preferredPaymentMethod:
-          form.payment === "bkash" ? "bkash" : undefined,
       };
 
-      navigate("/checkout/payment", {
-        state: { pendingOrder },
+      console.log("[checkout] Creating order", orderPayload);
+      const { data, error } = (await supabase.rpc(
+        "place_order",
+        orderPayload,
+      )) as PlaceOrderResponse;
+
+      if (error || !data || !Array.isArray(data) || data.length === 0) {
+        throw new Error(getErrorMessage(error, "Failed to place order. Please try again."));
+      }
+
+      const createdOrder = data[0] as { id: string; order_number: string };
+      console.log("[checkout] Order created", createdOrder);
+
+      if (form.payment !== "cod") {
+        const pendingOrder: PendingOrderPayload = {
+          items: items.map((i) => {
+            const { normalizedColor, normalizedSize } = parseVariantSelection(
+              i.selectedVariant,
+              i.selectedColor,
+              i.selectedSize,
+            );
+
+            return {
+              product_id: i.product.id,
+              quantity: i.quantity,
+              price: i.product.price,
+              name: i.product.name,
+              selected_variant: i.selectedVariant ?? null,
+              selected_color: normalizedColor,
+              selected_size: normalizedSize,
+              product_image: i.product.image ?? null,
+              sku: i.product.sku ?? null,
+              subtotal: Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
+            };
+          }),
+          customer_name: fullName,
+          customer_phone: normalizedPhone,
+          customer_email: user?.email || null,
+          shipping_address: `${address}, ${city}`,
+          subtotal,
+          shipping_fee: deliveryFee,
+          discount: appliedDiscountAmount,
+          total,
+          notes: [
+            validatedPromoCode ? `Coupon: ${validatedPromoCode}` : null,
+            `Delivery Zone: ${form.deliveryZone === "inside_dhaka" ? "Inside Dhaka" : "Outside Dhaka"}`,
+            form.onlinePaymentType === "shipping_only"
+              ? `Amount due now: ৳${deliveryFee}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" | "),
+          preferredPaymentMethod:
+            form.payment === "bkash" ? "bkash" : undefined,
+        };
+
+        console.log("[checkout] Redirecting to payment gateway");
+        navigate(`/checkout/payment/${createdOrder.id}`, {
+          state: {
+            pendingOrder,
+            orderId: createdOrder.id,
+            orderNumber: createdOrder.order_number,
+          },
+          replace: true,
+        });
+        return;
+      }
+
+      toast.success(`Order placed! Your order ID: ${createdOrder.order_number}`);
+      clearCart();
+      console.log("[checkout] Cart cleared");
+      console.log("[checkout] Redirecting to order tracking");
+      navigate(`/track-order?order=${encodeURIComponent(createdOrder.order_number)}`, {
+        replace: true,
       });
-      return;
-    }
-
-    setLoading(true);
-
-    const deliveryLabel =
-      form.deliveryZone === "inside_dhaka" ? "Inside Dhaka" : "Outside Dhaka";
-    const paymentLabel = "Cash on Delivery";
-
-    const orderPayload = {
-      p_customer_name: fullName,
-      p_customer_phone: normalizedPhone,
-      p_customer_email: user?.email || null,
-      p_shipping_address: `${address}, ${city}`,
-      p_items: items.map((i) => ({
-        product_id: i.product.id,
-        quantity: i.quantity,
-        selected_variant: i.selectedVariant ?? null,
-      })),
-      p_shipping_fee: deliveryFee,
-      p_promo_discount_percent:
-        subtotal > 0 ? (appliedDiscountAmount / subtotal) * 100 : 0,
-      p_payment_method: "cod",
-      p_notes: [
-        validatedPromoCode ? `Coupon: ${validatedPromoCode}` : null,
-        `Delivery Zone: ${deliveryLabel}`,
-        `Payment: ${paymentLabel}`,
-      ]
-        .filter(Boolean)
-        .join(" | "),
-    };
-
-    const { data, error } = (await supabase.rpc(
-      "place_order",
-      orderPayload,
-    )) as PlaceOrderResponse;
-
-    if (error || !data || !Array.isArray(data) || data.length === 0) {
-      toast.error(
-        getErrorMessage(error, "Failed to place order. Please try again."),
-      );
+    } catch (error) {
+      const message = getErrorMessage(error, "Failed to place order. Please try again.");
+      console.error("[checkout] Order creation failed", error);
+      toast.error(message);
+    } finally {
+      console.log("[checkout] Resetting loading state");
       setLoading(false);
-      return;
     }
-
-    const createdOrder = data[0] as { id: string; order_number: string };
-    const orderNumber = createdOrder.order_number;
-    toast.success(`Order placed! Your order ID: ${orderNumber}`);
-    clearCart();
   };
 
   return (
@@ -555,7 +638,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || isCartEmpty || authLoading}
                 className="primary-btn mt-5 w-full gap-2 py-3.5 text-base disabled:opacity-60"
               >
                 {loading ? "Placing Order..." : "Confirm Order"}

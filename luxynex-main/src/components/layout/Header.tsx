@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProducts } from "@/hooks/useProducts";
 import { motion, AnimatePresence } from "framer-motion";
+import logoImage from "@/assets/logo-luxynex.jpg";
 const navLinks = [
   { label: "Home", to: "/" },
   { label: "Shop", to: "/shop" },
@@ -59,14 +60,14 @@ export default function Header() {
         </div>
       </div>
       <header
-        className={`sticky top-0 z-50 border-b border-gray-100 bg-white/95 backdrop-blur-md transition-all duration-300 ${scrolled ? "shadow-sm" : ""}`}
+        className={`sticky top-0 z-50 min-w-0 border-b border-gray-100 bg-white/95 backdrop-blur-md transition-all duration-300 ${scrolled ? "shadow-sm" : ""}`}
       >
-        <div className="container mx-auto flex items-center justify-between h-14 px-4">
-          <Link to="/" className="flex items-center gap-3">
+        <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-3 sm:px-4">
+          <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             <img
-              src="/assets/logo.png"
+              src={logoImage}
               alt="Luxynex"
-              className="w-10 h-10 rounded-xl object-cover"
+              className="h-9 w-9 rounded-xl object-cover sm:h-10 sm:w-10"
             />
             <span className="text-lg font-bold text-foreground hidden sm:inline tracking-wide">
               LUXYNEX
@@ -85,7 +86,7 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-1">
+          <div className="flex min-w-0 items-center gap-0 sm:gap-1">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="p-2 rounded-xl hover:bg-muted transition-colors"

@@ -63,13 +63,16 @@ export default function CartPage() {
         </h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-3">
-            {items?.map(({ product: p, quantity, selectedVariant }) => {
+            {items?.map(({ product: p, quantity, selectedVariant, selectedColor, selectedSize }) => {
               const productId = p?.id ?? "";
               const productName = p?.name ?? "Cart item";
               const productPrice = Number(p?.price ?? 0);
               const productQuantity = Number(quantity ?? 0);
               const normalizedVariant = selectedVariant ?? null;
-              const itemKey = `${productId}-${normalizedVariant ?? "default"}-${productQuantity}`;
+              const normalizedColor = selectedColor ?? null;
+              const normalizedSize = selectedSize ?? null;
+              const variantSummary = [normalizedColor, normalizedSize].filter(Boolean).join(" / ") || normalizedVariant;
+              const itemKey = `${productId}-${normalizedVariant ?? "default"}-${normalizedColor ?? "default"}-${normalizedSize ?? "default"}-${productQuantity}`;
 
               return (
                 <div
@@ -88,9 +91,9 @@ export default function CartPage() {
                     >
                       {productName}
                     </Link>
-                    {normalizedVariant ? (
+                    {variantSummary ? (
                       <p className="text-xs text-muted-foreground mt-1 truncate">
-                        {normalizedVariant}
+                        {variantSummary}
                       </p>
                     ) : null}
                     <p className="text-primary font-bold text-sm mt-1">
@@ -100,7 +103,7 @@ export default function CartPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        if (productId) updateQuantity(productId, productQuantity - 1, normalizedVariant);
+                        if (productId) updateQuantity(productId, productQuantity - 1, normalizedVariant, normalizedColor, normalizedSize);
                       }}
                       className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-primary/10"
                     >
@@ -111,7 +114,7 @@ export default function CartPage() {
                     </span>
                     <button
                       onClick={() => {
-                        if (productId) updateQuantity(productId, productQuantity + 1, normalizedVariant);
+                        if (productId) updateQuantity(productId, productQuantity + 1, normalizedVariant, normalizedColor, normalizedSize);
                       }}
                       className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center hover:bg-primary/10"
                     >
@@ -124,7 +127,7 @@ export default function CartPage() {
                   <button
                     onClick={() => {
                       if (productId) {
-                        removeFromCart(productId, normalizedVariant);
+                        removeFromCart(productId, normalizedVariant, normalizedColor, normalizedSize);
                         toast.info("Removed from cart");
                       }
                     }}

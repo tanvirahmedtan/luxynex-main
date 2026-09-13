@@ -22,6 +22,7 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -62,6 +63,7 @@ export default function ProfilePage() {
   const [customerSummary, setCustomerSummary] = useState<AdminCustomer | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/signin");
@@ -129,6 +131,7 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     if (!profile || !user) return;
 
+    setSaving(true);
     const { error } = await supabase
       .from("profiles")
       .update({ full_name: form.full_name, phone: form.phone })
@@ -136,12 +139,14 @@ export default function ProfilePage() {
 
     if (error) {
       toast.error("Failed to update profile");
+      setSaving(false);
       return;
     }
 
     toast.success("Profile updated!");
     await refreshProfile();
     setEditing(false);
+    setSaving(false);
   };
 
   const handleChangePassword = async () => {
@@ -414,8 +419,20 @@ export default function ProfilePage() {
                     <Edit2 className="w-4 h-4 mr-1" /> Edit profile
                   </Button>
                 ) : (
-                  <Button size="sm" onClick={handleSaveProfile}>
-                    <Save className="w-4 h-4 mr-1" /> Save changes
+                  <Button 
+                    size="sm" 
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-1" /> Save changes
+                      </>
+                    )}
                   </Button>
                 )}
               </CardHeader>

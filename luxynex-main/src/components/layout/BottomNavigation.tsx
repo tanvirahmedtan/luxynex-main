@@ -16,7 +16,7 @@ export default function BottomNavigation() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#111111] safe-area-bottom">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#111111] safe-area-bottom">
       <div className="flex items-center justify-around py-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;

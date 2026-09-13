@@ -101,19 +101,19 @@ export default function HeroSlider() {
               {...(current === 0 ? { fetchPriority: "high" as any } : {})}
             />
             {(slide.title || slide.subtitle) && (
-              <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent flex items-center p-6 sm:p-10">
-                <div className="max-w-md text-white">
+              <div className="absolute inset-0 flex items-end bg-gradient-to-r from-black/80 via-black/45 to-black/10 px-5 py-8 sm:items-center sm:px-10 sm:py-10">
+                <div className="max-w-md text-white drop-shadow-md">
                   {slide.subtitle && (
-                    <p className="text-sm font-semibold mb-2 opacity-90">
+                    <p className="mb-2 max-w-[32rem] text-sm font-semibold leading-relaxed text-white/95 sm:text-base">
                       {slide.subtitle}
                     </p>
                   )}
                   {slide.title && (
-                    <h1 className="text-3xl sm:text-4xl font-bold mb-4">
+                    <h1 className="mb-4 max-w-[32rem] text-2xl font-bold leading-tight text-white sm:text-4xl">
                       {slide.title}
                     </h1>
                   )}
-                  <span className="inline-block primary-btn px-6 py-3 text-sm">
+                  <span className="primary-btn inline-flex px-5 py-2.5 text-sm shadow-lg shadow-black/25 sm:px-6 sm:py-3">
                     Shop Now →
                   </span>
                 </div>

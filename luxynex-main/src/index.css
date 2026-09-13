@@ -56,11 +56,14 @@
 
   html {
     background: hsl(var(--background));
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: "Inter", sans-serif;
+    min-width: 0;
+    overflow-x: hidden;
     background-image: radial-gradient(
         circle at top,
         rgba(212, 175, 55, 0.08),
@@ -149,6 +152,7 @@
     overflow: hidden;
     white-space: nowrap;
     width: 100%;
+    min-width: 0;
     display: flex;
     justify-content: flex-start;
     padding: 0.5rem 0;

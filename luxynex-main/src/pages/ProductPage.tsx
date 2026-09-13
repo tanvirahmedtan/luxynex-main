@@ -398,7 +398,7 @@ export default function ProductPage() {
                     return;
                   }
 
-                  addToCart(product, qty, selectedVariantLabel);
+                  addToCart(product, qty, selectedVariantLabel, selectedColor, selectedSize);
                   toast.success("Added to cart!");
                 }}
                 disabled={isOOS}
@@ -424,7 +424,7 @@ export default function ProductPage() {
                     return;
                   }
                   clearCart();
-                  addToCart(product, qty, selectedVariantLabel);
+                  addToCart(product, qty, selectedVariantLabel, selectedColor, selectedSize);
                   toast.success("Proceeding to checkout!");
                   navigate("/checkout");
                 }}

@@ -51,6 +51,10 @@ type OrderItem = {
   size?: string;
   sku?: string;
   variantInfo?: string;
+  product_id?: string;
+  subtotal?: number;
+  selected_color?: string;
+  selected_size?: string;
 };
 
 type InvoiceRpcRow = {
@@ -295,13 +299,34 @@ export default function AdminOrders() {
         price: Number(record.price ?? record.unit_price ?? 0),
         quantity: Number(record.quantity ?? record.qty ?? 0),
         image: typeof record.image === "string" ? record.image : undefined,
-        color,
-        size,
+        color:
+          getCleanString(record.selected_color) ??
+          getCleanString(record.selectedColor) ??
+          getCleanString(record.color) ??
+          getCleanString(record.variant_color) ??
+          getCleanString(record.variantColor) ??
+          getCleanString(variantInfoRecord.color) ??
+          getCleanString(variantInfoRecord.colour) ??
+          parsedSelectedVariant.color ??
+          parsedVariantInfo.color,
+        size:
+          getCleanString(record.selected_size) ??
+          getCleanString(record.selectedSize) ??
+          getCleanString(record.size) ??
+          getCleanString(record.variant_size) ??
+          getCleanString(record.variantSize) ??
+          getCleanString(variantInfoRecord.size) ??
+          parsedSelectedVariant.size ??
+          parsedVariantInfo.size,
         sku: getCleanString(record.sku) ?? getCleanString(record.product_sku),
         variantInfo:
           !color && !size
             ? variantInfoText ?? getCleanString(selectedVariant)
             : undefined,
+        product_id: getCleanString(record.product_id),
+        subtotal: Number(record.subtotal ?? record.total ?? 0),
+        selected_color: getCleanString(record.selected_color) ?? getCleanString(record.selectedColor),
+        selected_size: getCleanString(record.selected_size) ?? getCleanString(record.selectedSize),
       };
     });
   }, [selected]);
@@ -912,8 +937,8 @@ export default function AdminOrders() {
                               <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-300">
                                 {item.sku && <span>SKU: {item.sku}</span>}
                                 <span>Qty: {item.quantity}</span>
-                                {item.color && <span>Color: {item.color}</span>}
-                                {item.size && <span>Size: {item.size}</span>}
+                                <span>Color: {item.color || "N/A"}</span>
+                                <span>Size: {item.size || "N/A"}</span>
                               </div>
                             </div>
                             <p className="font-semibold text-white">

@@ -12,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className={isMobile ? "pb-20" : ""}>{children}</main>
+      <main className={isMobile ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""}>{children}</main>
       <Footer />
       <BottomNavigation />
     </div>

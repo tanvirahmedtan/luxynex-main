@@ -1,5 +1,16 @@
 {
+  "scripts": {
+    "dev": "npm --prefix luxynex-main run dev",
+    "build": "npm --prefix luxynex-main run build",
+    "start": "npm --prefix luxynex-main run preview",
+    "preview": "npm --prefix luxynex-main run preview",
+    "lint": "npm --prefix luxynex-main run lint",
+    "test": "npm --prefix luxynex-main run test"
+  },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1"
+    "@vercel/analytics": "^2.0.1",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

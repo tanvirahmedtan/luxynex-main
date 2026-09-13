@@ -11,6 +11,12 @@ type PendingOrderPayload = {
     quantity: number;
     price: number;
     name: string;
+    selected_variant?: string | null;
+    selected_color?: string | null;
+    selected_size?: string | null;
+    product_image?: string | null;
+    sku?: string | null;
+    subtotal?: number;
   }[];
   customer_name: string;
   customer_phone: string | null;
@@ -26,6 +32,8 @@ type PendingOrderPayload = {
 
 type CheckoutPaymentState = {
   pendingOrder?: PendingOrderPayload;
+  orderId?: string;
+  orderNumber?: string;
 } | null;
 
 type ShippingDetails = {
@@ -45,6 +53,8 @@ export default function CheckoutPayment() {
 
   const state = location.state as CheckoutPaymentState;
   const pendingOrder = state?.pendingOrder ?? null;
+  const existingOrderId = state?.orderId ?? null;
+  const existingOrderNumber = state?.orderNumber ?? null;
   const shippingDetails: ShippingDetails | null = pendingOrder
     ? {
         name: pendingOrder.customer_name,
@@ -116,11 +126,24 @@ export default function CheckoutPayment() {
         status: "pending",
       };
 
-      const { data, error } = await supabase
-        .from("admin_orders")
-        .insert([insertPayload])
-        .select("order_number")
-        .maybeSingle();
+      const { data, error } = existingOrderId
+        ? await supabase
+            .from("admin_orders")
+            .update({
+              payment_method: method,
+              sender_number: senderNumber.trim(),
+              transaction_id: transactionId.trim(),
+              payment_status: "Pending Verification",
+              status: "pending",
+            })
+            .eq("id", existingOrderId)
+            .select("order_number")
+            .maybeSingle()
+        : await supabase
+            .from("admin_orders")
+            .insert([insertPayload])
+            .select("order_number")
+            .maybeSingle();
 
       if (error) {
         console.error("CheckoutPayment insert error:", error);
@@ -134,7 +157,7 @@ export default function CheckoutPayment() {
       }
 
       toast.success("Payment details submitted successfully! Your order is being reviewed.");
-      navigate(`/track-order?order=${encodeURIComponent(data.order_number)}`, {
+      navigate(`/track-order?order=${encodeURIComponent(data.order_number || existingOrderNumber || "")}`, {
         replace: true,
       });
     } finally {

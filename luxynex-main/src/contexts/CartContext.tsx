@@ -21,6 +21,8 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedVariant?: string | null;
+  selectedColor?: string | null;
+  selectedSize?: string | null;
 }
 
 export type PromoResult = {
@@ -32,9 +34,9 @@ export type PromoResult = {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, qty?: number, selectedVariant?: string | null) => void;
-  removeFromCart: (productId: string, selectedVariant?: string | null) => void;
-  updateQuantity: (productId: string, qty: number, selectedVariant?: string | null) => void;
+  addToCart: (product: Product, qty?: number, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) => void;
+  removeFromCart: (productId: string, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) => void;
+  updateQuantity: (productId: string, qty: number, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) => void;
   clearCart: () => void;
   clearCoupon: () => void;
   totalItems: number;
@@ -54,6 +56,32 @@ const STORAGE_KEY = "luxynex_cart_v1";
 
 const normalizeCouponCode = (code: string) => code.trim().toUpperCase();
 
+export const parseVariantSelection = (
+  selectedVariant?: string | null,
+  selectedColor?: string | null,
+  selectedSize?: string | null,
+) => {
+  const normalizedVariant = selectedVariant?.trim() || null;
+  const normalizedColor = selectedColor?.trim() || null;
+  const normalizedSize = selectedSize?.trim() || null;
+
+  const variantText = normalizedVariant ?? "";
+  const colorFromVariant =
+    normalizedColor ??
+    variantText.match(/(?:^|[|,])\s*(?:color|colour)\s*:\s*([^|,]+)/i)?.[1]?.trim() ??
+    null;
+  const sizeFromVariant =
+    normalizedSize ??
+    variantText.match(/(?:^|[|,])\s*size\s*:\s*([^|,]+)/i)?.[1]?.trim() ??
+    null;
+
+  return {
+    normalizedVariant,
+    normalizedColor: normalizedColor ?? colorFromVariant ?? null,
+    normalizedSize: normalizedSize ?? sizeFromVariant ?? null,
+  };
+};
+
 const isCartItem = (value: unknown): value is CartItem => {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<CartItem>;
@@ -65,7 +93,13 @@ const isCartItem = (value: unknown): value is CartItem => {
     typeof (item.product as Partial<Product>).id === "string" &&
     (item.selectedVariant === undefined ||
       item.selectedVariant === null ||
-      typeof item.selectedVariant === "string")
+      typeof item.selectedVariant === "string") &&
+    (item.selectedColor === undefined ||
+      item.selectedColor === null ||
+      typeof item.selectedColor === "string") &&
+    (item.selectedSize === undefined ||
+      item.selectedSize === null ||
+      typeof item.selectedSize === "string")
   );
 };
 
@@ -185,13 +219,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [items, promoCode, appliedCoupon, hydrated]);
 
   const addToCart = useCallback(
-    (product: Product, qty = 1, selectedVariant?: string | null) => {
-      const normalizedVariant = selectedVariant?.trim() || null;
+    (product: Product, qty = 1, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) => {
+      const { normalizedVariant, normalizedColor, normalizedSize } = parseVariantSelection(
+        selectedVariant,
+        selectedColor,
+        selectedSize,
+      );
       setItems((prev) => {
         const existingIndex = prev.findIndex(
           (i) =>
             i.product.id === product.id &&
-            (i.selectedVariant || null) === normalizedVariant,
+            (i.selectedVariant || null) === normalizedVariant &&
+            (i.selectedColor || null) === normalizedColor &&
+            (i.selectedSize || null) === normalizedSize,
         );
 
         if (existingIndex > -1) {
@@ -204,7 +244,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
         return [
           ...prev,
-          { product, quantity: qty, selectedVariant: normalizedVariant },
+          {
+            product,
+            quantity: qty,
+            selectedVariant: normalizedVariant,
+            selectedColor: normalizedColor,
+            selectedSize: normalizedSize,
+          },
         ];
       });
     },
@@ -212,23 +258,37 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const removeFromCart = useCallback(
-    (id: string, selectedVariant?: string | null) =>
-      setItems((prev) =>
-        prev.filter(
+    (id: string, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) =>
+      setItems((prev) => {
+        const { normalizedVariant, normalizedColor, normalizedSize } = parseVariantSelection(
+          selectedVariant,
+          selectedColor,
+          selectedSize,
+        );
+        return prev.filter(
           (i) =>
             i.product.id !== id ||
-            (i.selectedVariant || null) !== (selectedVariant?.trim() || null),
-        ),
-      ),
+            (i.selectedVariant || null) !== normalizedVariant ||
+            (i.selectedColor || null) !== normalizedColor ||
+            (i.selectedSize || null) !== normalizedSize,
+        );
+      }),
     [],
   );
   const updateQuantity = useCallback(
-    (id: string, qty: number, selectedVariant?: string | null) => {
+    (id: string, qty: number, selectedVariant?: string | null, selectedColor?: string | null, selectedSize?: string | null) => {
       if (qty < 1) return;
-      const normalizedVariant = selectedVariant?.trim() || null;
+      const { normalizedVariant, normalizedColor, normalizedSize } = parseVariantSelection(
+        selectedVariant,
+        selectedColor,
+        selectedSize,
+      );
       setItems((prev) =>
         prev.map((i) =>
-          i.product.id === id && (i.selectedVariant || null) === normalizedVariant
+          i.product.id === id &&
+          (i.selectedVariant || null) === normalizedVariant &&
+          (i.selectedColor || null) === normalizedColor &&
+          (i.selectedSize || null) === normalizedSize
             ? { ...i, quantity: qty }
             : i,
         ),

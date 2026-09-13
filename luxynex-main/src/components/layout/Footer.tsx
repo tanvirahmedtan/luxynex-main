@@ -9,6 +9,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { useCategories } from "@/hooks/useCategories";
+import logoImage from "@/assets/logo-luxynex.jpg";
 import {
   SOCIAL_LINKS,
   WHATSAPP_URL,
@@ -53,7 +54,7 @@ export default function Footer() {
         <div>
           <div className="flex items-center gap-3 mb-4">
             <img
-              src="/assets/logo.png"
+              src={logoImage}
               alt="Luxynex"
               className="w-10 h-10 rounded-xl object-cover"
             />
