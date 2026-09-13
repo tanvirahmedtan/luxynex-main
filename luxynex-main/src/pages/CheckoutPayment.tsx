@@ -102,51 +102,35 @@ export default function CheckoutPayment() {
     setLoading(true);
 
     try {
-      const uniqueOrderNumber = `LXV-${new Date()
-        .toISOString()
-        .slice(0, 10)
-        .replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
+      if (!existingOrderId) {
+        toast.error("Missing order ID. Please return to checkout and try again.");
+        return;
+      }
 
-      const insertPayload = {
-        order_number: uniqueOrderNumber,
-        customer_name: pendingOrder.customer_name,
-        customer_phone: pendingOrder.customer_phone || "",
-        customer_email: pendingOrder.customer_email,
-        shipping_address: pendingOrder.shipping_address,
-        subtotal: pendingOrder.subtotal,
-        shipping_fee: pendingOrder.shipping_fee,
-        discount: pendingOrder.discount,
-        total: pendingOrder.total,
-        notes: pendingOrder.notes,
-        items: pendingOrder.items,
-        payment_method: method,
-        sender_number: senderNumber.trim(),
-        transaction_id: transactionId.trim(),
-        payment_status: "Pending Verification",
-        status: "pending",
-      };
+      const { error: paymentError } = await supabase.rpc(
+        "submit_order_payment_details",
+        {
+          p_order_id: existingOrderId,
+          p_payment_method: method,
+          p_sender_number: senderNumber.trim(),
+          p_transaction_id: transactionId.trim(),
+        },
+      );
 
-      const { data, error } = existingOrderId
-        ? await supabase
-            .from("admin_orders")
-            .update({
-              payment_method: method,
-              sender_number: senderNumber.trim(),
-              transaction_id: transactionId.trim(),
-              payment_status: "Pending Verification",
-              status: "pending",
-            })
-            .eq("id", existingOrderId)
-            .select("order_number")
-            .maybeSingle()
-        : await supabase
-            .from("admin_orders")
-            .insert([insertPayload])
-            .select("order_number")
-            .maybeSingle();
+      if (paymentError) {
+        console.error("CheckoutPayment RPC error:", paymentError);
+        toast.error("Unable to submit payment details. See console for details.");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("admin_orders")
+        .select("order_number")
+        .eq("id", existingOrderId)
+        .maybeSingle();
 
       if (error) {
-        console.error("CheckoutPayment insert error:", error);
+        console.error("CheckoutPayment order lookup error:", error);
         toast.error("Unable to submit payment details. See console for details.");
         return;
       }
@@ -160,6 +144,9 @@ export default function CheckoutPayment() {
       navigate(`/track-order?order=${encodeURIComponent(data.order_number || existingOrderNumber || "")}`, {
         replace: true,
       });
+    } catch (error) {
+      console.error("CheckoutPayment submission error:", error);
+      toast.error("Unable to submit payment details. See console for details.");
     } finally {
       setLoading(false);
     }

@@ -546,6 +546,15 @@ export type Database = {
         };
         Returns: boolean;
       };
+      submit_order_payment_details: {
+        Args: {
+          p_order_id: string;
+          p_payment_method: string;
+          p_sender_number: string;
+          p_transaction_id: string;
+        };
+        Returns: undefined;
+      };
       place_order: {
         Args: {
           p_customer_email: string;
