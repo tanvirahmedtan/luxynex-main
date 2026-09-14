@@ -107,7 +107,7 @@ const getCreatedOrder = (data: PlaceOrderResponse["data"]) => {
   const orderNumber =
     typeof row?.order_number === "string" ? row.order_number.trim() : "";
 
-  return id && orderNumber ? { id, order_number: orderNumber } : null;
+  return id || orderNumber ? { id, order_number: orderNumber } : null;
 };
 
 export default function CheckoutPage() {
@@ -273,10 +273,28 @@ export default function CheckoutPage() {
         throw new Error(getErrorMessage(error, "Failed to place order. Please try again."));
       }
 
-      const createdOrder = getCreatedOrder(data);
+      let createdOrder = getCreatedOrder(data);
       console.log("[checkout] Order created", createdOrder);
 
-      if (!createdOrder) {
+      if (!createdOrder?.id || !createdOrder.order_number) {
+        const lookupValue = createdOrder?.id || createdOrder?.order_number;
+        if (lookupValue) {
+          const lookupColumn = createdOrder.id ? "id" : "order_number";
+          const { data: recoveredOrder, error: lookupError } = await supabase
+            .from("admin_orders")
+            .select("id, order_number")
+            .eq(lookupColumn, lookupValue)
+            .maybeSingle();
+
+          if (lookupError) {
+            console.error("[checkout] Order ID recovery failed", lookupError);
+          } else {
+            createdOrder = getCreatedOrder(recoveredOrder);
+          }
+        }
+      }
+
+      if (!createdOrder?.id || !createdOrder.order_number) {
         console.error("[checkout] Order insertion returned no usable ID", { data });
         throw new Error("Failed to generate order ID. Please try again.");
       }

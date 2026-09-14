@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import CheckoutPage from "../pages/CheckoutPage";
 
-const { mockNavigate, mockRpc, mockClearCart, mockToastError, mockToastSuccess } = vi.hoisted(() => ({
+const { mockNavigate, mockRpc, mockFrom, mockClearCart, mockToastError, mockToastSuccess } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockRpc: vi.fn(),
+  mockFrom: vi.fn(),
   mockClearCart: vi.fn(),
   mockToastError: vi.fn(),
   mockToastSuccess: vi.fn(),
@@ -68,6 +69,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: mockRpc,
+    from: mockFrom,
   },
 }));
 
@@ -84,6 +86,13 @@ describe("CheckoutPage", () => {
     mockRpc.mockResolvedValue({
       data: [{ id: "order-1", order_number: "LXV-12345" }],
       error: null,
+    });
+    mockFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        })),
+      })),
     });
   });
 
@@ -223,5 +232,50 @@ describe("CheckoutPage", () => {
         expect.objectContaining({ replace: true }),
       );
     });
+  });
+
+  it("recovers the ID when the RPC only returns an order number", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [{ order_number: "LXV-24680" }],
+      error: null,
+    });
+    mockFrom.mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { id: "recovered-order", order_number: "LXV-24680" },
+            error: null,
+          }),
+        })),
+      })),
+    });
+
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/checkout/payment?orderId=recovered-order",
+        expect.objectContaining({ replace: true }),
+      );
+    });
+    expect(mockFrom).toHaveBeenCalledWith("admin_orders");
   });
 });
