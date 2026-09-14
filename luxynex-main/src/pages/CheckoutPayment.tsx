@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Copy, Loader2, Smartphone } from "lucide-react";
@@ -47,8 +47,9 @@ type ShippingDetails = {
 export default function CheckoutPayment() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { orderId: routeOrderId } = useParams<{ orderId?: string }>();
-  const queryOrderId = new URLSearchParams(location.search).get("orderId");
+  const queryOrderId = searchParams.get("orderId");
   const [method, setMethod] = useState<PayMethod>("bkash");
   const [loading, setLoading] = useState(false);
   const [senderNumber, setSenderNumber] = useState("");
@@ -56,10 +57,9 @@ export default function CheckoutPayment() {
 
   const state = location.state as CheckoutPaymentState;
   const pendingOrder = state?.pendingOrder ?? null;
-  const existingOrderId =
-    [routeOrderId, queryOrderId, state?.orderId]
-      .map((orderId) => orderId?.trim())
-      .find((orderId) => orderId && orderId !== "undefined" && orderId !== "null") ?? null;
+  const existingOrderId = [routeOrderId, queryOrderId, state?.orderId]
+    .map((orderId) => orderId?.trim())
+    .find((orderId) => orderId && orderId !== "undefined" && orderId !== "null") ?? null;
   const existingOrderNumber = state?.orderNumber ?? null;
   const shippingDetails: ShippingDetails | null = pendingOrder
     ? {

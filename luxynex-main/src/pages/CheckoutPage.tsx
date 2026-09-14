@@ -32,7 +32,7 @@ type CouponValidationResult = {
   message?: string | null;
 };
 
-type PlaceOrderResult = { id: string; order_number: string }[];
+type PlaceOrderRow = { id?: string | null; order_number?: string | null };
 
 type PendingOrderItem = {
   product_id: string;
@@ -67,7 +67,7 @@ type ValidateCouponResponse = {
 };
 
 type PlaceOrderResponse = {
-  data: PlaceOrderResult | null;
+  data: PlaceOrderRow | PlaceOrderRow[] | null;
   error: unknown;
 };
 
@@ -99,6 +99,15 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   }
 
   return fallback;
+};
+
+const getCreatedOrder = (data: PlaceOrderResponse["data"]) => {
+  const row = Array.isArray(data) ? data[0] : data;
+  const id = typeof row?.id === "string" ? row.id.trim() : "";
+  const orderNumber =
+    typeof row?.order_number === "string" ? row.order_number.trim() : "";
+
+  return id && orderNumber ? { id, order_number: orderNumber } : null;
 };
 
 export default function CheckoutPage() {
@@ -260,15 +269,16 @@ export default function CheckoutPage() {
         orderPayload,
       )) as PlaceOrderResponse;
 
-      if (error || !data || !Array.isArray(data) || data.length === 0) {
+      if (error) {
         throw new Error(getErrorMessage(error, "Failed to place order. Please try again."));
       }
 
-      const createdOrder = data[0] as { id: string; order_number: string };
+      const createdOrder = getCreatedOrder(data);
       console.log("[checkout] Order created", createdOrder);
 
-      if (!createdOrder.id?.trim()) {
-        throw new Error("Order was created without an ID. Please try again.");
+      if (!createdOrder) {
+        console.error("[checkout] Order insertion returned no usable ID", { data });
+        throw new Error("Failed to generate order ID. Please try again.");
       }
 
       if (form.payment !== "cod") {

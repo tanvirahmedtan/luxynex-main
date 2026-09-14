@@ -185,9 +185,43 @@ describe("CheckoutPage", () => {
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith(
-        "Order was created without an ID. Please try again.",
+        "Failed to generate order ID. Please try again.",
       );
     });
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("accepts an object-shaped RPC response and redirects with its order ID", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: { id: "order-object", order_number: "LXV-67890" },
+      error: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/checkout/payment?orderId=order-object",
+        expect.objectContaining({ replace: true }),
+      );
+    });
   });
 });
