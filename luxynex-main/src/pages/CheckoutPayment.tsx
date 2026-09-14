@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Copy, Loader2, Smartphone } from "lucide-react";
@@ -46,6 +46,8 @@ type ShippingDetails = {
 export default function CheckoutPayment() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { orderId: routeOrderId } = useParams<{ orderId?: string }>();
+  const queryOrderId = new URLSearchParams(location.search).get("orderId");
   const [method, setMethod] = useState<PayMethod>("bkash");
   const [loading, setLoading] = useState(false);
   const [senderNumber, setSenderNumber] = useState("");
@@ -53,7 +55,10 @@ export default function CheckoutPayment() {
 
   const state = location.state as CheckoutPaymentState;
   const pendingOrder = state?.pendingOrder ?? null;
-  const existingOrderId = state?.orderId ?? null;
+  const existingOrderId =
+    [routeOrderId, queryOrderId, state?.orderId]
+      .map((orderId) => orderId?.trim())
+      .find((orderId) => orderId && orderId !== "undefined" && orderId !== "null") ?? null;
   const existingOrderNumber = state?.orderNumber ?? null;
   const shippingDetails: ShippingDetails | null = pendingOrder
     ? {
@@ -67,6 +72,13 @@ export default function CheckoutPayment() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    if (!existingOrderId) {
+      toast.error("Missing order ID. Please return to checkout and try again.");
+      navigate("/checkout", { replace: true });
+    }
+  }, [existingOrderId, navigate]);
 
   useEffect(() => {
     if (pendingOrder?.preferredPaymentMethod) {
@@ -89,8 +101,8 @@ export default function CheckoutPayment() {
   };
 
   const submitPayment = async () => {
-    if (!pendingOrder) {
-      toast.error("Missing checkout data. Please reopen the checkout page.");
+    if (!existingOrderId) {
+      toast.error("Missing order ID. Please return to checkout and try again.");
       return;
     }
 
@@ -102,11 +114,6 @@ export default function CheckoutPayment() {
     setLoading(true);
 
     try {
-      if (!existingOrderId) {
-        toast.error("Missing order ID. Please return to checkout and try again.");
-        return;
-      }
-
       const { error: paymentError } = await supabase.rpc(
         "submit_order_payment_details",
         {
@@ -162,11 +169,7 @@ export default function CheckoutPayment() {
           <h1 className="mt-2 text-3xl font-bold text-foreground">
             Checkout Payment
           </h1>
-          {!pendingOrder ? (
-            <p className="mt-2 text-sm text-red-600">
-              No checkout data was found. Please return to the checkout page and submit again.
-            </p>
-          ) : (
+          {pendingOrder ? (
             <div className="mt-2 space-y-2 text-sm text-muted-foreground">
               <p>
                 Customer: <span className="font-semibold text-foreground">{pendingOrder.customer_name}</span>
@@ -175,6 +178,10 @@ export default function CheckoutPayment() {
                 Shipping Address: <span className="font-semibold text-foreground">{pendingOrder.shipping_address}</span>
               </p>
             </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Enter your payment details to verify this order.
+            </p>
           )}
         </div>
 

@@ -568,6 +568,7 @@ export type Database = {
           p_shipping_fee: number;
         };
         Returns: {
+          id: string;
           order_number: string;
         }[];
       };

@@ -49,8 +49,8 @@ export default function Header() {
 
   return (
     <>
-      <div className="announcement-bar">
-        <div className="marquee-track">
+      <div className="announcement-bar min-w-0 overflow-hidden">
+        <div className="marquee-track max-w-full">
           <span>🚚 Free Delivery on orders above ৳5000!</span>
           <span>🚚 Free Delivery on orders above ৳5000!</span>
           <span>🚚 Free Delivery on orders above ৳5000!</span>
@@ -152,7 +152,7 @@ export default function Header() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden border-t border-border"
             >
-              <div className="container mx-auto px-4 py-3 relative">
+              <div className="container mx-auto min-w-0 px-3 py-3 relative sm:px-4">
                 <input
                   autoFocus
                   value={searchQuery}

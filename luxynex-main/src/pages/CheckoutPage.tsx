@@ -266,6 +266,10 @@ export default function CheckoutPage() {
       const createdOrder = data[0] as { id: string; order_number: string };
       console.log("[checkout] Order created", createdOrder);
 
+      if (!createdOrder.id?.trim()) {
+        throw new Error("Order was created without an ID. Please try again.");
+      }
+
       if (form.payment !== "cod") {
         const pendingOrder: PendingOrderPayload = {
           items: items.map((i) => {
@@ -310,7 +314,7 @@ export default function CheckoutPage() {
         };
 
         console.log("[checkout] Redirecting to payment gateway");
-        navigate(`/checkout/payment/${createdOrder.id}`, {
+        navigate(`/checkout/payment?orderId=${encodeURIComponent(createdOrder.id)}`, {
           state: {
             pendingOrder,
             orderId: createdOrder.id,
@@ -324,8 +328,8 @@ export default function CheckoutPage() {
       toast.success(`Order placed! Your order ID: ${createdOrder.order_number}`);
       clearCart();
       console.log("[checkout] Cart cleared");
-      console.log("[checkout] Redirecting to order tracking");
-      navigate(`/track-order?order=${encodeURIComponent(createdOrder.order_number)}`, {
+      console.log("[checkout] Redirecting to order success");
+      navigate(`/order-success?order=${encodeURIComponent(createdOrder.order_number)}&phone=${encodeURIComponent(normalizedPhone)}&orderId=${encodeURIComponent(createdOrder.id)}`, {
         replace: true,
       });
     } catch (error) {

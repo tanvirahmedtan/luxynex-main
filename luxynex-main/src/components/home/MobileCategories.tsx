@@ -9,10 +9,10 @@ export default function MobileCategories() {
   if (!isMobile || loading || categories.length === 0) return null;
 
   return (
-    <section className="mb-6 px-4">
+    <section className="mb-6 min-w-0 overflow-hidden px-4">
       <h2 className="mb-3 text-lg font-bold text-foreground">CATEGORIES</h2>
-      <div className="overflow-x-auto pb-2 scrollbar-hide">
-        <div className="grid w-max auto-rows-[128px] grid-flow-col grid-rows-2 gap-3">
+      <div className="min-w-0 overflow-x-auto overscroll-x-contain pb-2 scrollbar-hide">
+        <div className="grid w-max min-w-0 auto-rows-[128px] grid-flow-col grid-rows-2 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.id}

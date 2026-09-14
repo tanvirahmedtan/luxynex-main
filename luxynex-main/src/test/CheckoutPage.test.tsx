@@ -114,7 +114,7 @@ describe("CheckoutPage", () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith(
-        "/track-order?order=LXV-12345",
+        "/order-success?order=LXV-12345&phone=01712345678&orderId=order-1",
         { replace: true },
       );
     });
@@ -122,5 +122,72 @@ describe("CheckoutPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /confirm order/i })).toBeEnabled();
     });
+  });
+
+  it("redirects online payments with the returned order ID", async () => {
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/checkout/payment?orderId=order-1",
+        expect.objectContaining({
+          replace: true,
+          state: expect.objectContaining({ orderId: "order-1" }),
+        }),
+      );
+    });
+  });
+
+  it("does not navigate when the backend omits the order ID", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: [{ order_number: "LXV-12345" }],
+      error: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Order was created without an ID. Please try again.",
+      );
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
