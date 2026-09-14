@@ -39,7 +39,7 @@ export default function Index() {
       />
       <div className="container mx-auto px-4 py-6 space-y-10">
         {/* Hero + Category Sidebar */}
-        <section className="flex items-stretch gap-4">
+        <section className="-mx-4 flex items-stretch gap-4 sm:mx-0">
           <aside className="hidden w-[250px] flex-shrink-0 lg:block lg:self-stretch">
             <CategorySidebar />
           </aside>

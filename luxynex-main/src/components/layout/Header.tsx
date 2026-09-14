@@ -25,7 +25,6 @@ const navLinks = [
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { totalItems } = useCart();
   const { user, profile } = useAuth();
@@ -47,6 +46,17 @@ export default function Header() {
           .slice(0, 5)
       : [];
 
+  const resetSearch = () => {
+    setSearchQuery("");
+  };
+
+  const submitSearch = () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+    navigate(`/shop?q=${encodeURIComponent(query)}`);
+    resetSearch();
+  };
+
   return (
     <>
       <div className="announcement-bar min-w-0 overflow-hidden">
@@ -65,7 +75,7 @@ export default function Header() {
         <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-3 sm:px-4">
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             <BrandLogo imageClassName="h-9 w-9 object-contain sm:h-10 sm:w-10" />
-            <span className="text-lg font-bold text-foreground hidden sm:inline tracking-wide">
+            <span className="text-sm font-bold tracking-wide text-foreground sm:text-lg">
               LUXYNEX
             </span>
           </Link>
@@ -82,13 +92,51 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex min-w-0 items-center gap-0 sm:gap-1">
+          <div className="relative hidden min-w-0 flex-1 items-center gap-2 md:flex md:max-w-sm lg:max-w-md">
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="min-w-0 flex-1 rounded-xl border border-border bg-muted px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitSearch();
+              }}
+            />
             <button
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 rounded-xl hover:bg-muted transition-colors"
+              type="button"
+              onClick={submitSearch}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+              aria-label="Submit product search"
             >
-              <Search className="w-5 h-5 text-foreground" />
+              <Search className="h-4 w-4" />
             </button>
+            {suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+                {suggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      navigate(`/product/${p.id}`);
+                      resetSearch();
+                    }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted"
+                  >
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="h-8 w-8 rounded object-cover"
+                    />
+                    <span className="text-foreground">{p.name}</span>
+                    <span className="ml-auto font-semibold text-primary">
+                      ৳{p.price}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex min-w-0 items-center gap-0 sm:gap-1">
             <Link
               to="/cart"
               className="p-2 rounded-xl hover:bg-muted transition-colors relative"
@@ -140,38 +188,33 @@ export default function Header() {
           </div>
         </div>
 
-        <AnimatePresence>
-          {searchOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-border"
-            >
-              <div className="container mx-auto min-w-0 px-3 py-3 relative sm:px-4">
+          <div className="flex overflow-visible border-t border-border md:hidden">
+            <div className="container relative mx-auto flex min-w-0 gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
                 <input
-                  autoFocus
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="w-full rounded-xl bg-muted px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+                  className="min-w-0 flex-1 rounded-xl border border-border bg-muted px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && searchQuery) {
-                      navigate(`/shop?q=${searchQuery}`);
-                      setSearchOpen(false);
-                      setSearchQuery("");
-                    }
+                    if (e.key === "Enter") submitSearch();
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={submitSearch}
+                  className="flex shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-primary-foreground transition-colors hover:bg-primary/90"
+                  aria-label="Submit product search"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
                 {suggestions.length > 0 && (
-                  <div className="absolute left-4 right-4 top-full mt-1 bg-background border border-border rounded-xl shadow-lg overflow-hidden z-50">
+                  <div className="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-background shadow-lg sm:left-4 sm:right-4">
                     {suggestions.map((p) => (
                       <button
                         key={p.id}
                         onClick={() => {
                           navigate(`/product/${p.id}`);
-                          setSearchOpen(false);
-                          setSearchQuery("");
+                          resetSearch();
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted text-left text-sm"
                       >
@@ -189,9 +232,7 @@ export default function Header() {
                   </div>
                 )}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
 
         <AnimatePresence>
           {mobileOpen && (

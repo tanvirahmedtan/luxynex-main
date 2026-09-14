@@ -75,14 +75,14 @@ export default function HeroSlider() {
   if (loading || !slide) {
     // show skeleton while loading or when no slides
     return (
-      <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-border bg-muted sm:min-h-[380px] lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
+      <div className="relative h-full min-h-[240px] w-full overflow-hidden rounded-none border-0 bg-muted sm:min-h-[380px] sm:rounded-2xl sm:border sm:border-border lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
         <div className="animate-pulse h-full w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
       </div>
     );
   }
 
   return (
-    <div className="relative h-full min-h-[280px] overflow-hidden rounded-2xl border border-border bg-muted sm:min-h-[380px] lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
+    <div className="relative h-full min-h-[240px] w-full overflow-hidden rounded-none border-0 bg-muted sm:min-h-[380px] sm:rounded-2xl sm:border sm:border-border lg:h-[380px] xl:h-[420px] 2xl:h-[460px]">
       <AnimatePresence mode="wait">
         <motion.div
           key={slide.id}
@@ -96,24 +96,24 @@ export default function HeroSlider() {
             <img
               src={slide.image_url}
               alt={slide.title}
-              className="absolute inset-0 w-full h-full object-cover transform-gpu will-change-transform"
+              className="absolute inset-0 h-full w-full object-cover transform-gpu will-change-transform"
               loading={current === 0 ? "eager" : "lazy"}
               {...(current === 0 ? { fetchPriority: "high" as any } : {})}
             />
             {(slide.title || slide.subtitle) && (
-              <div className="absolute inset-0 flex items-end bg-gradient-to-r from-black/80 via-black/45 to-black/10 px-5 py-8 sm:items-center sm:px-10 sm:py-10">
-                <div className="max-w-md text-white drop-shadow-md">
+              <div className="absolute inset-x-3 bottom-3 flex rounded-xl bg-white/95 px-4 py-3 shadow-lg sm:inset-0 sm:items-center sm:rounded-none sm:bg-gradient-to-r sm:from-black/80 sm:via-black/45 sm:to-black/10 sm:px-10 sm:py-10 sm:shadow-none">
+                <div className="max-w-md text-foreground sm:text-white sm:drop-shadow-md">
                   {slide.subtitle && (
-                    <p className="mb-2 max-w-[32rem] text-sm font-semibold leading-relaxed text-white/95 sm:text-base">
+                    <p className="mb-1 max-w-[32rem] text-xs font-semibold leading-relaxed text-foreground/75 sm:mb-2 sm:text-base sm:text-white/95">
                       {slide.subtitle}
                     </p>
                   )}
                   {slide.title && (
-                    <h1 className="mb-4 max-w-[32rem] text-2xl font-bold leading-tight text-white sm:text-4xl">
+                    <h1 className="mb-2 max-w-[32rem] text-lg font-bold leading-tight text-foreground sm:mb-4 sm:text-4xl sm:text-white">
                       {slide.title}
                     </h1>
                   )}
-                  <span className="primary-btn inline-flex px-5 py-2.5 text-sm shadow-lg shadow-black/25 sm:px-6 sm:py-3">
+                  <span className="primary-btn inline-flex px-4 py-2 text-xs shadow-md sm:px-6 sm:py-3 sm:text-sm sm:shadow-lg sm:shadow-black/25">
                     Shop Now →
                   </span>
                 </div>
@@ -126,22 +126,23 @@ export default function HeroSlider() {
         onClick={() =>
           setCurrent((p) => (p - 1 + slides.length) % slides.length)
         }
-        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background shadow border border-border flex items-center justify-center hover:bg-muted transition-colors"
+        className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow transition-colors hover:bg-muted"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
       <button
         onClick={() => setCurrent((p) => (p + 1) % slides.length)}
-        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background shadow border border-border flex items-center justify-center hover:bg-muted transition-colors"
+        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background shadow transition-colors hover:bg-muted"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/35 px-2.5 py-1.5 sm:bottom-3 sm:bg-transparent sm:px-0 sm:py-0">
         {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className={`w-2 h-2 rounded-full transition-all ${i === current ? "w-6 bg-primary" : "bg-foreground/20"}`}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`h-2 rounded-full transition-all ${i === current ? "w-6 bg-primary" : "w-2 bg-white/90 shadow-sm"}`}
           />
         ))}
       </div>
