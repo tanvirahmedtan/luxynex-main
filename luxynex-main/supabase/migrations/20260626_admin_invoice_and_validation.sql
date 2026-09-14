@@ -88,6 +88,8 @@ BEGIN
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
         .invoice { background: white; max-width: 800px; margin: 0 auto; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .header { border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand img { width: 52px; height: 52px; object-fit: contain; }
         .company-name { font-size: 24px; font-weight: bold; color: #333; }
         .invoice-title { float: right; font-size: 28px; color: #999; font-weight: bold; }
         .clearfix { clear: both; }
@@ -106,7 +108,7 @@ BEGIN
     <body>
       <div class="invoice">
         <div class="header">
-          <div class="company-name">LUXYNEX</div>
+          <div class="brand"><img src="https://www.luxynex.shop/assets/luxynex-logo.svg" alt="LUXYNEX"><div class="company-name">LUXYNEX</div></div>
           <div class="invoice-title">INVOICE</div>
           <div class="clearfix"></div>
         </div>

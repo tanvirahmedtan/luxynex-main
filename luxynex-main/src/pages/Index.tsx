@@ -21,13 +21,13 @@ export default function Index() {
           "@type": "WebSite",
           name: "Luxynex",
           url: "https://luxynex.lovable.app",
-          logo: "https://luxynex.lovable.app/assets/logo.png",
+          logo: "https://www.luxynex.shop/assets/luxynex-logo.svg",
           publisher: {
             "@type": "Organization",
             name: "Luxynex",
             logo: {
               "@type": "ImageObject",
-              url: "https://luxynex.lovable.app/assets/logo.png",
+              url: "https://www.luxynex.shop/assets/luxynex-logo.svg",
             },
           },
           potentialAction: {

@@ -4,6 +4,7 @@ import { parseVariantSelection, useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import BrandLogo from "@/components/layout/BrandLogo";
 import {
   ArrowLeft,
   ArrowRight,
@@ -354,6 +355,7 @@ export default function CheckoutPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex items-center gap-2">
+            <BrandLogo imageClassName="h-8 w-8 object-contain" />
             <Lock className="h-5 w-5 text-foreground" />
             <h1 className="text-xl font-bold text-foreground md:text-2xl">
               Secure Checkout

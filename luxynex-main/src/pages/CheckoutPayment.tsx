@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Copy, Loader2, Smartphone } from "lucide-react";
 import { type PayMethod } from "@/lib/orderPayment";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 type PendingOrderPayload = {
   items: {
@@ -163,6 +164,7 @@ export default function CheckoutPayment() {
     <div className="container mx-auto max-w-3xl px-4 py-10">
       <div className="light-card space-y-6 p-6 sm:p-8">
         <div>
+          <BrandLogo imageClassName="h-10 w-10 object-contain" />
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">
             Payment Verification
           </p>

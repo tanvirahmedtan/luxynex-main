@@ -13,7 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProducts } from "@/hooks/useProducts";
 import { motion, AnimatePresence } from "framer-motion";
-import logoImage from "@/assets/logo-luxynex.jpg";
+import BrandLogo from "./BrandLogo";
 const navLinks = [
   { label: "Home", to: "/" },
   { label: "Shop", to: "/shop" },
@@ -64,11 +64,7 @@ export default function Header() {
       >
         <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-2 px-3 sm:px-4">
           <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
-            <img
-              src={logoImage}
-              alt="Luxynex"
-              className="h-9 w-9 rounded-xl object-cover sm:h-10 sm:w-10"
-            />
+            <BrandLogo imageClassName="h-9 w-9 object-contain sm:h-10 sm:w-10" />
             <span className="text-lg font-bold text-foreground hidden sm:inline tracking-wide">
               LUXYNEX
             </span>

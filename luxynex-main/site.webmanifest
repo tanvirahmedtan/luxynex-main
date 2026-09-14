@@ -4,12 +4,12 @@
   "description": "Shop premium gadgets, attar, and perfumes online at Luxynex with fast delivery across Bangladesh.",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "/assets/luxynex-logo.svg",
       "sizes": "any",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "/assets/logo.png",
+      "src": "/assets/luxynex-logo.svg",
       "sizes": "any",
       "type": "image/png"
     }

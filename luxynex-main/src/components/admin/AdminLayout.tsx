@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import BrandLogo from "@/components/layout/BrandLogo";
 import {
   LayoutDashboard,
   Package,
@@ -140,10 +141,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       >
         <div className="p-4 border-b border-border">
           <div className="flex items-center gap-3">
-            <img
-              src="/favicon.png"
+            <BrandLogo
               alt="Luxynex Logo"
-              className="h-12 w-12 rounded-2xl object-contain bg-slate-100 p-2"
+              imageClassName="h-12 w-12 object-contain"
+              className="h-12 w-12 rounded-2xl bg-slate-100 p-2"
             />
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">

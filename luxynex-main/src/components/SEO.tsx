@@ -39,7 +39,7 @@ export default function SEO({
     "@type": "Organization",
     name: "Luxynex",
     url: SITE,
-    logo: `${SITE}/assets/logo.png`,
+    logo: `${SITE}/assets/luxynex-logo.svg`,
   };
   const lds = [
     defaultOrganization,

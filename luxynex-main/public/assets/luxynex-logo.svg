@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Luxynex</title>
+  <desc id="desc">Luxynex shopping cart logo</desc>
+  <g fill="currentColor">
+    <rect x="50" y="166" width="112" height="24" rx="12" />
+    <rect x="72" y="211" width="90" height="24" rx="12" />
+    <rect x="96" y="256" width="64" height="22" rx="11" />
+    <path d="M181 80h92c20 0 36 17 31 36l-31 130h140c18 0 28 21 16 35l-24 28c-10 12-25 19-41 19H206l-5 22h184c10 0 18 8 18 18s-8 18-18 18H195c-27 0-48-24-42-50l39-174-52-43c-12-10-5-29 11-29Zm-5 273h184c10 0 18 8 18 18s-8 18-18 18H176c-10 0-18-8-18-18s8-18 18-18Z" />
+    <circle cx="220" cy="430" r="28" />
+    <circle cx="362" cy="430" r="28" />
+  </g>
+</svg>
