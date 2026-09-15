@@ -294,6 +294,8 @@ export default function CheckoutPage() {
         throw new Error("place_order returned no order number");
       }
 
+      window.dispatchEvent(new Event("luxynex:orders-changed"));
+
       if (form.payment !== "cod" && !createdOrder.id) {
         const { data: recoveredOrder, error: lookupError } =
           (await supabase.rpc("get_checkout_order", {

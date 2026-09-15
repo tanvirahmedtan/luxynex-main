@@ -29,7 +29,6 @@ import { motion } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
 
 type AdminOrder = Database["public"]["Tables"]["admin_orders"]["Row"];
-type AdminCustomer = Database["public"]["Tables"]["admin_customers"]["Row"];
 
 const statusColor = (status: string) => {
   const map: Record<string, string> = {
@@ -54,13 +53,12 @@ const formatDate = (value?: string) =>
     : "—";
 
 export default function ProfilePage() {
-  const { user, profile, loading, signOut, refreshProfile } = useAuth();
+  const { user, session, profile, loading, signOut, refreshProfile } = useAuth();
   const { items: wishlistItems } = useWishlist();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "" });
   const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [customerSummary, setCustomerSummary] = useState<AdminCustomer | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -76,37 +74,29 @@ export default function ProfilePage() {
   }, [profile]);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .rpc("get_customer_orders")
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("[profile] Customer orders lookup failed", error);
-          setOrders([]);
-          return;
-        }
-        setOrders((data || []) as AdminOrder[]);
-      });
-  }, [user, profile]);
+    if (loading || !session?.user?.id || session.user.id !== user?.id) return;
 
-  useEffect(() => {
-    if (!user) return;
+    let active = true;
+    const loadOrders = async () => {
+      const { data, error } = await supabase.rpc("get_customer_orders");
+      if (!active) return;
+      if (error) {
+        console.error("[profile] Customer orders lookup failed", error);
+        setOrders([]);
+        return;
+      }
+      setOrders((data || []) as AdminOrder[]);
+    };
 
-    const filters = [];
-    if (user.email) filters.push(`email.eq.${user.email}`);
-    if (profile?.phone) filters.push(`phone.eq.${profile.phone}`);
+    const handleOrdersChanged = () => void loadOrders();
+    window.addEventListener("luxynex:orders-changed", handleOrdersChanged);
+    void loadOrders();
 
-    if (filters.length === 0) return;
-
-    supabase
-      .from("admin_customers")
-      .select("*")
-      .or(filters.join(","))
-      .single()
-      .then(({ data }) => {
-        if (data) setCustomerSummary(data);
-      });
-  }, [user, profile]);
+    return () => {
+      active = false;
+      window.removeEventListener("luxynex:orders-changed", handleOrdersChanged);
+    };
+  }, [loading, session?.user?.id, user?.id]);
 
   const stats = useMemo(() => {
     const revenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -114,13 +104,13 @@ export default function ProfilePage() {
     const delivered = orders.filter((order) => order.status === "delivered").length;
 
     return {
-      totalOrders: customerSummary?.total_orders ?? orders.length,
-      totalSpent: customerSummary?.total_spent ?? revenue,
+      totalOrders: orders.length,
+      totalSpent: revenue,
       pendingOrders: pending,
       deliveredOrders: delivered,
       averageOrder: orders.length > 0 ? revenue / orders.length : 0,
     };
-  }, [orders, customerSummary]);
+  }, [orders]);
 
   const recentOrders = orders.slice(0, 3);
   const wishlistPreview = wishlistItems.slice(0, 3);
