@@ -192,7 +192,7 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 footer-safe">
           <p className="text-xs text-white/55">
-            © 2026 Lucynex. All Rights Reserved. | Owned & Operated by Tanvir Ahmed
+            © 2026 Luxynex. All Rights Reserved. | Owned & Operated by Tanvir Ahmed
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-white/55 sm:justify-end">
             <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 font-medium">
