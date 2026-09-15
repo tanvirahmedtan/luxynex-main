@@ -115,10 +115,11 @@ export default function CheckoutPayment() {
     setLoading(true);
 
     try {
-      const { error: paymentError } = await supabase.rpc(
+      const { data: paymentData, error: paymentError } = await supabase.rpc(
         "submit_order_payment_details",
         {
           p_order_id: existingOrderId,
+          p_customer_phone: pendingOrder?.customer_phone ?? "",
           p_payment_method: method,
           p_sender_number: senderNumber.trim(),
           p_transaction_id: transactionId.trim(),
@@ -131,25 +132,18 @@ export default function CheckoutPayment() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("admin_orders")
-        .select("order_number")
-        .eq("id", existingOrderId)
-        .maybeSingle();
+      const orderNumber = Array.isArray(paymentData)
+        ? paymentData[0]?.order_number
+        : undefined;
 
-      if (error) {
-        console.error("CheckoutPayment order lookup error:", error);
-        toast.error("Unable to submit payment details. See console for details.");
-        return;
-      }
-
-      if (!data?.order_number) {
-        toast.error("Order creation failed. Please try again.");
+      if (!orderNumber) {
+        console.error("CheckoutPayment response missing order number:", paymentData);
+        toast.error("Unable to confirm payment details. Please try again.");
         return;
       }
 
       toast.success("Payment details submitted successfully! Your order is being reviewed.");
-      navigate(`/track-order?order=${encodeURIComponent(data.order_number || existingOrderNumber || "")}`, {
+      navigate(`/track-order?order=${encodeURIComponent(orderNumber || existingOrderNumber || "")}`, {
         replace: true,
       });
     } catch (error) {

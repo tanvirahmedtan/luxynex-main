@@ -159,6 +159,7 @@ const getVariantInfo = (item: OrderItem) =>
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
+  const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [savingPaymentStatus, setSavingPaymentStatus] = useState(false);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
@@ -171,6 +172,45 @@ export default function AdminOrders() {
   };
 
   useEffect(() => {
+    if (!selected?.id) {
+      setSelectedItems([]);
+      return;
+    }
+
+    const loadSelectedItems = async () => {
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("*")
+        .eq("order_id", selected.id)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Failed to load order items for admin view", error);
+        setSelectedItems([]);
+        return;
+      }
+
+      setSelectedItems(
+        (data || []).map((item) => ({
+          name: item.product_name,
+          price: Number(item.price ?? item.unit_price ?? 0),
+          quantity: Number(item.quantity ?? 1),
+          image: item.product_image ?? undefined,
+          color: item.selected_color ?? undefined,
+          size: item.selected_size ?? undefined,
+          sku: item.sku ?? undefined,
+          product_id: item.product_id ?? undefined,
+          subtotal: Number(item.subtotal ?? 0),
+          selected_color: item.selected_color ?? undefined,
+          selected_size: item.selected_size ?? undefined,
+        })),
+      );
+    };
+
+    loadSelectedItems();
+  }, [selected?.id]);
+
+  useEffect(() => {
     fetchOrders();
     const ch = supabase
       .channel(`admin_orders_${Math.random().toString(36).slice(2)}`)
@@ -179,11 +219,44 @@ export default function AdminOrders() {
         { event: "*", schema: "public", table: "admin_orders" },
         () => fetchOrders(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "order_items" },
+        () => {
+          fetchOrders();
+          if (selected?.id) {
+            supabase
+              .from("order_items")
+              .select("*")
+              .eq("order_id", selected.id)
+              .order("created_at", { ascending: true })
+              .then(({ data, error }) => {
+                if (!error) {
+                  setSelectedItems(
+                    (data || []).map((item) => ({
+                      name: item.product_name,
+                      price: Number(item.price ?? item.unit_price ?? 0),
+                      quantity: Number(item.quantity ?? 1),
+                      image: item.product_image ?? undefined,
+                      color: item.selected_color ?? undefined,
+                      size: item.selected_size ?? undefined,
+                      sku: item.sku ?? undefined,
+                      product_id: item.product_id ?? undefined,
+                      subtotal: Number(item.subtotal ?? 0),
+                      selected_color: item.selected_color ?? undefined,
+                      selected_size: item.selected_size ?? undefined,
+                    })),
+                  );
+                }
+              });
+          }
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [selected?.id]);
 
   const updateStatus = async (id: string, status: string) => {
     const { error } = await supabase
@@ -236,107 +309,13 @@ export default function AdminOrders() {
     return [];
   };
 
-  const selectedItems = useMemo<OrderItem[]>(() => {
-    if (!selected) return [];
-    const raw = (() => {
-      try {
-        const orderRecord = selected as unknown as Record<string, unknown>;
-        const paymentDetails =
-          orderRecord.payment_details &&
-          typeof orderRecord.payment_details === "object" &&
-          !Array.isArray(orderRecord.payment_details)
-            ? (orderRecord.payment_details as Record<string, unknown>)
-            : {};
-
-        return (
-          orderRecord.items ??
-          orderRecord.cart_items ??
-          paymentDetails?.cart_items ??
-          []
-        );
-      } catch (err) {
-        console.error("Failed to parse order items for invoice", err);
-        return [];
-      }
-    })();
-    const items = parseOrderItems(raw);
-
-    return items.map((item) => {
-      const record = item as Record<string, unknown>;
-      const variantInfoRecord =
-        record.variant_info &&
-        typeof record.variant_info === "object" &&
-        !Array.isArray(record.variant_info)
-          ? (record.variant_info as Record<string, unknown>)
-          : {};
-      const selectedVariant =
-        record.selected_variant ?? record.selectedVariant ?? record.variant;
-      const parsedSelectedVariant = parseVariantText(selectedVariant);
-      const parsedVariantInfo = parseVariantText(record.variant_info);
-      const variantInfoText = getCleanString(record.variant_info);
-      const color =
-        getCleanString(record.color) ??
-        getCleanString(record.selected_color) ??
-        getCleanString(record.selectedColor) ??
-        getCleanString(record.variant_color) ??
-        getCleanString(record.variantColor) ??
-        getCleanString(variantInfoRecord.color) ??
-        getCleanString(variantInfoRecord.colour) ??
-        parsedSelectedVariant.color ??
-        parsedVariantInfo.color;
-      const size =
-        getCleanString(record.size) ??
-        getCleanString(record.selected_size) ??
-        getCleanString(record.selectedSize) ??
-        getCleanString(record.variant_size) ??
-        getCleanString(record.variantSize) ??
-        getCleanString(variantInfoRecord.size) ??
-        parsedSelectedVariant.size ??
-        parsedVariantInfo.size;
-
-      return {
-        name: typeof record.name === "string" ? record.name : "Unnamed item",
-        price: Number(record.price ?? record.unit_price ?? 0),
-        quantity: Number(record.quantity ?? record.qty ?? 0),
-        image: typeof record.image === "string" ? record.image : undefined,
-        color:
-          getCleanString(record.selected_color) ??
-          getCleanString(record.selectedColor) ??
-          getCleanString(record.color) ??
-          getCleanString(record.variant_color) ??
-          getCleanString(record.variantColor) ??
-          getCleanString(variantInfoRecord.color) ??
-          getCleanString(variantInfoRecord.colour) ??
-          parsedSelectedVariant.color ??
-          parsedVariantInfo.color,
-        size:
-          getCleanString(record.selected_size) ??
-          getCleanString(record.selectedSize) ??
-          getCleanString(record.size) ??
-          getCleanString(record.variant_size) ??
-          getCleanString(record.variantSize) ??
-          getCleanString(variantInfoRecord.size) ??
-          parsedSelectedVariant.size ??
-          parsedVariantInfo.size,
-        sku: getCleanString(record.sku) ?? getCleanString(record.product_sku),
-        variantInfo:
-          !color && !size
-            ? variantInfoText ?? getCleanString(selectedVariant)
-            : undefined,
-        product_id: getCleanString(record.product_id),
-        subtotal: Number(record.subtotal ?? record.total ?? 0),
-        selected_color: getCleanString(record.selected_color) ?? getCleanString(record.selectedColor),
-        selected_size: getCleanString(record.selected_size) ?? getCleanString(record.selectedSize),
-      };
-    });
-  }, [selected]);
-
   const selectedPaymentMethodLabel =
-    selected?.payment_method === "bkash"
+    selected?.payment_type ||
+    (selected?.payment_method === "bkash"
       ? "bKash"
       : selected?.payment_method === "nagad"
         ? "Nagad"
-        : "Cash on Delivery";
+        : "Cash on Delivery");
 
   const selectedPaymentStatus =
     (selected?.payment_status as PaymentStatus | null) || "Unpaid";
@@ -789,6 +768,14 @@ export default function AdminOrders() {
                     </div>
                     <div className="rounded-xl border border-white/10 bg-slate-900/70 p-4">
                       <p className="text-xs uppercase tracking-wide text-slate-400">
+                        Total Payable Amount
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-white">
+                        ৳{Number(selected.total).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-slate-900/70 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-400">
                         Current Payment Status
                       </p>
                       <Select
@@ -867,6 +854,14 @@ export default function AdminOrders() {
                         {selected.customer_email}
                       </div>
                     )}
+                    <div>
+                      <span className="text-slate-400">City:</span>{" "}
+                      <strong>{selected.city || "Not provided"}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Delivery Zone:</span>{" "}
+                      <strong>{selected.delivery_zone || "Not provided"}</strong>
+                    </div>
                     <div>
                       <span className="text-slate-400">Address:</span>{" "}
                       {selected.shipping_address}

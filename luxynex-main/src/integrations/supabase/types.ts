@@ -183,10 +183,12 @@ export type Database = {
       };
       admin_orders: {
         Row: {
+          city: string | null;
           created_at: string;
           customer_email: string | null;
           customer_name: string;
           customer_phone: string;
+          delivery_zone: string | null;
           discount: number;
           id: string;
           items: Json;
@@ -195,6 +197,7 @@ export type Database = {
           payment_details: Json | null;
           payment_method: Database["public"]["Enums"]["payment_method"];
           payment_status: string | null;
+          payment_type: string | null;
           sender_number: string | null;
           transaction_id: string | null;
           shipping_address: string;
@@ -205,10 +208,12 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          city?: string | null;
           created_at?: string;
           customer_email?: string | null;
           customer_name: string;
           customer_phone: string;
+          delivery_zone?: string | null;
           discount?: number;
           id?: string;
           items?: Json;
@@ -217,6 +222,7 @@ export type Database = {
           payment_details?: Json | null;
           payment_method?: Database["public"]["Enums"]["payment_method"];
           payment_status?: string | null;
+          payment_type?: string | null;
           sender_number?: string | null;
           transaction_id?: string | null;
           shipping_address: string;
@@ -227,10 +233,12 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          city?: string | null;
           created_at?: string;
           customer_email?: string | null;
           customer_name?: string;
           customer_phone?: string;
+          delivery_zone?: string | null;
           discount?: number;
           id?: string;
           items?: Json;
@@ -239,6 +247,7 @@ export type Database = {
           payment_details?: Json | null;
           payment_method?: Database["public"]["Enums"]["payment_method"];
           payment_status?: string | null;
+          payment_type?: string | null;
           sender_number?: string | null;
           transaction_id?: string | null;
           shipping_address?: string;
@@ -246,6 +255,57 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"];
           subtotal?: number;
           total?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      order_items: {
+        Row: {
+          created_at: string;
+          id: string;
+          order_id: string;
+          price: number;
+          product_id: string;
+          product_image: string | null;
+          product_name: string;
+          quantity: number;
+          selected_color: string | null;
+          selected_size: string | null;
+          sku: string | null;
+          subtotal: number;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          order_id: string;
+          price?: number;
+          product_id: string;
+          product_image?: string | null;
+          product_name: string;
+          quantity?: number;
+          selected_color?: string | null;
+          selected_size?: string | null;
+          sku?: string | null;
+          subtotal?: number;
+          unit_price?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          order_id?: string;
+          price?: number;
+          product_id?: string;
+          product_image?: string | null;
+          product_name?: string;
+          quantity?: number;
+          selected_color?: string | null;
+          selected_size?: string | null;
+          sku?: string | null;
+          subtotal?: number;
+          unit_price?: number;
           updated_at?: string;
         };
         Relationships: [];
@@ -548,12 +608,15 @@ export type Database = {
       };
       submit_order_payment_details: {
         Args: {
+          p_customer_phone: string;
           p_order_id: string;
           p_payment_method: string;
           p_sender_number: string;
           p_transaction_id: string;
         };
-        Returns: undefined;
+        Returns: {
+          order_number: string;
+        }[];
       };
       place_order: {
         Args: {
@@ -561,14 +624,13 @@ export type Database = {
           p_customer_name: string;
           p_customer_phone: string;
           p_items: Json;
-          p_notes: string;
-          p_payment_method: string;
-          p_promo_discount_percent: number;
           p_shipping_address: string;
           p_shipping_fee: number;
+          p_promo_discount_percent: number;
+          p_payment_method: string;
+          p_notes: string;
         };
         Returns: {
-          id: string;
           order_number: string;
         }[];
       };

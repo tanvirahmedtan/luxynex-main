@@ -256,7 +256,15 @@ export default function CheckoutPage() {
         p_payment_method: form.payment === "cod" ? "cod" : "bkash",
         p_notes: [
           validatedPromoCode ? `Coupon: ${validatedPromoCode}` : null,
+          `City: ${city}`,
           `Delivery Zone: ${deliveryLabel}`,
+          `Payment Type: ${
+            form.payment === "cod"
+              ? "Cash on Delivery"
+              : form.onlinePaymentType === "shipping_only"
+                ? "Shipping Only"
+                : "Full Payment"
+          }`,
           `Payment: ${paymentLabel}`,
         ]
           .filter(Boolean)
@@ -362,9 +370,8 @@ export default function CheckoutPage() {
         replace: true,
       });
     } catch (error) {
-      const message = getErrorMessage(error, "Failed to place order. Please try again.");
       console.error("[checkout] Order creation failed", error);
-      toast.error(message);
+      toast.error("We couldn't place your order. Please check your details and try again.");
     } finally {
       console.log("[checkout] Resetting loading state");
       setLoading(false);

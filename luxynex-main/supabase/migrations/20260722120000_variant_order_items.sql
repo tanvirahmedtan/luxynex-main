@@ -1,11 +1,18 @@
+ALTER TABLE public.admin_orders
+  ADD COLUMN IF NOT EXISTS city text,
+  ADD COLUMN IF NOT EXISTS delivery_zone text,
+  ADD COLUMN IF NOT EXISTS payment_type text;
+
 CREATE TABLE IF NOT EXISTS public.order_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id uuid NOT NULL REFERENCES public.admin_orders(id) ON DELETE CASCADE,
   product_id uuid NOT NULL,
   product_name text NOT NULL,
+  product_name_raw text,
   selected_color text,
   selected_size text,
   quantity integer NOT NULL DEFAULT 1,
+  price numeric NOT NULL DEFAULT 0,
   unit_price numeric NOT NULL DEFAULT 0,
   subtotal numeric NOT NULL DEFAULT 0,
   product_image text,
@@ -26,7 +33,7 @@ CREATE OR REPLACE FUNCTION public.place_order(
   p_promo_discount_percent numeric,
   p_payment_method text,
   p_notes text
-) RETURNS TABLE(id uuid, order_number text)
+) RETURNS TABLE(order_number text)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -43,7 +50,6 @@ DECLARE
   v_items jsonb := '[]'::jsonb;
   v_order_number text;
   v_id uuid;
-  v_order_item_id uuid;
   v_payment_method_text text;
 BEGIN
   IF p_customer_name IS NULL OR length(trim(p_customer_name)) = 0 THEN
@@ -103,22 +109,21 @@ BEGIN
   v_total := v_subtotal - v_discount + p_shipping_fee;
   v_order_number := 'LXV-' || to_char(now(),'YYYYMMDD') || '-' || lpad(floor(random()*100000)::text, 5, '0');
 
-  -- Normalize and map incoming payment method text to the DB enum
   v_payment_method_text := lower(trim(coalesce(p_payment_method, '')));
   IF v_payment_method_text = 'online' OR v_payment_method_text = '' THEN
-    -- default online to bKash for compatibility with existing enum values
     v_payment_method_text := 'bkash';
   END IF;
 
   INSERT INTO public.admin_orders(
     order_number, customer_name, customer_phone, customer_email,
-    shipping_address, items, subtotal, shipping_fee, discount, total,
-    status, payment_method, payment_status, notes
+    shipping_address, items, subtotal, shipping_fee,
+    discount, total, status, payment_method, payment_status, notes
   ) VALUES (
     v_order_number, trim(p_customer_name), p_customer_phone,
     NULLIF(trim(coalesce(p_customer_email,'')), ''),
-    p_shipping_address, v_items, v_subtotal, p_shipping_fee, v_discount, v_total,
-    'pending'::order_status, v_payment_method_text::payment_method, 'pending', p_notes
+    p_shipping_address, v_items, v_subtotal, p_shipping_fee, v_discount,
+    v_total, 'pending'::order_status, v_payment_method_text::payment_method,
+    'pending', p_notes
   ) RETURNING id INTO v_id;
 
   FOR item IN SELECT * FROM jsonb_array_elements(v_items) LOOP
@@ -129,6 +134,7 @@ BEGIN
       selected_color,
       selected_size,
       quantity,
+      price,
       unit_price,
       subtotal,
       product_image,
@@ -140,6 +146,7 @@ BEGIN
       NULLIF(item->>'selected_color', ''),
       NULLIF(item->>'selected_size', ''),
       COALESCE((item->>'quantity')::int, 1),
+      COALESCE((item->>'price')::numeric, (item->>'unit_price')::numeric, 0),
       COALESCE((item->>'unit_price')::numeric, 0),
       COALESCE((item->>'subtotal')::numeric, 0),
       NULLIF(item->>'product_image', ''),
@@ -147,7 +154,7 @@ BEGIN
     );
   END LOOP;
 
-  RETURN QUERY SELECT v_id, v_order_number;
+  RETURN QUERY SELECT v_order_number;
 END;
 $$;
 

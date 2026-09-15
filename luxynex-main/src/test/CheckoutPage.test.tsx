@@ -133,6 +133,49 @@ describe("CheckoutPage", () => {
     });
   });
 
+  it("uses the production RPC signature and preserves checkout details in notes", async () => {
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(mockRpc).toHaveBeenCalledWith(
+        "place_order",
+        expect.objectContaining({
+          p_customer_name: "Test User",
+          p_customer_phone: "01712345678",
+          p_shipping_address: "123 Test Street, Dhaka",
+          p_shipping_fee: 80,
+          p_promo_discount_percent: 0,
+          p_payment_method: "bkash",
+          p_notes: expect.stringContaining("City: Dhaka"),
+        }),
+      );
+
+      const [, payload] = mockRpc.mock.calls.at(-1) as [string, Record<string, unknown>];
+      expect(payload).not.toHaveProperty("p_city");
+      expect(payload).not.toHaveProperty("p_delivery_zone");
+      expect(payload).not.toHaveProperty("p_payment_type");
+    });
+  });
+
   it("redirects online payments with the returned order ID", async () => {
     render(
       <MemoryRouter>
@@ -193,9 +236,9 @@ describe("CheckoutPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Failed to generate order ID. Please try again.",
-      );
+        expect(mockToastError).toHaveBeenCalledWith(
+          "We couldn't place your order. Please check your details and try again.",
+        );
     });
     expect(mockNavigate).not.toHaveBeenCalled();
   });
