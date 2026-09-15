@@ -14,6 +14,8 @@ export interface Product {
   colors?: string[];
   images?: string[];
   sizes?: string[];
+  variants?: unknown[];
+  attributes?: unknown[];
   stockCount?: number;
   sku?: string;
 }

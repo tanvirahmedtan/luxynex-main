@@ -77,19 +77,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!user) return;
-
-    const filters = [];
-    if (user.email) filters.push(`customer_email.eq.${user.email}`);
-    if (profile?.phone) filters.push(`customer_phone.eq.${profile.phone}`);
-
-    const query = supabase
-      .from("admin_orders")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (filters.length > 0) query.or(filters.join(","));
-
-    query.then(({ data }) => setOrders(data || []));
+    supabase
+      .rpc("get_customer_orders")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[profile] Customer orders lookup failed", error);
+          setOrders([]);
+          return;
+        }
+        setOrders((data || []) as AdminOrder[]);
+      });
   }, [user, profile]);
 
   useEffect(() => {

@@ -45,7 +45,7 @@ const statusClass = (status: string) => {
 export default function AdminSupportTickets() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
-  const [status, setStatus] = useState<string>("open");
+  const [status, setStatus] = useState<SupportTicket["status"]>("open");
   const [reply, setReply] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -215,7 +215,13 @@ export default function AdminSupportTickets() {
                                       id="ticket-status"
                                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                                       value={activeTicket?.id === ticket.id ? status : ticket.status}
-                                      onChange={(event) => setStatus(event.target.value)}
+                                      onChange={(event) =>
+                                        setStatus(
+                                          STATUS_OPTIONS.find(
+                                            (value) => value === event.target.value,
+                                          ) ?? "open",
+                                        )
+                                      }
                                     >
                                       {STATUS_OPTIONS.map((value) => (
                                         <option key={value} value={value}>

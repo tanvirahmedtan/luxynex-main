@@ -71,6 +71,11 @@ type PlaceOrderResponse = {
   error: unknown;
 };
 
+type CheckoutOrderLookupResponse = {
+  data: PlaceOrderRow | PlaceOrderRow[] | null;
+  error: unknown;
+};
+
 type CheckoutForm = {
   fullName: string;
   phone: string;
@@ -284,27 +289,38 @@ export default function CheckoutPage() {
       let createdOrder = getCreatedOrder(data);
       console.log("[checkout] Order created", createdOrder);
 
-      if (!createdOrder?.id || !createdOrder.order_number) {
-        const lookupValue = createdOrder?.id || createdOrder?.order_number;
-        if (lookupValue) {
-          const lookupColumn = createdOrder.id ? "id" : "order_number";
-          const { data: recoveredOrder, error: lookupError } = await supabase
-            .from("admin_orders")
-            .select("id, order_number")
-            .eq(lookupColumn, lookupValue)
-            .maybeSingle();
-
-          if (lookupError) {
-            console.error("[checkout] Order ID recovery failed", lookupError);
-          } else {
-            createdOrder = getCreatedOrder(recoveredOrder);
-          }
-        }
+      if (!createdOrder?.order_number) {
+        console.error("[checkout] place_order returned no order number", { data });
+        throw new Error("place_order returned no order number");
       }
 
-      if (!createdOrder?.id || !createdOrder.order_number) {
-        console.error("[checkout] Order insertion returned no usable ID", { data });
-        throw new Error("Failed to generate order ID. Please try again.");
+      if (form.payment !== "cod" && !createdOrder.id) {
+        const { data: recoveredOrder, error: lookupError } =
+          (await supabase.rpc("get_checkout_order", {
+            p_order_number: createdOrder.order_number,
+            p_customer_phone: normalizedPhone,
+          })) as CheckoutOrderLookupResponse;
+
+        if (lookupError) {
+          console.error("[checkout] Secure order ID recovery failed", {
+            rpc: "get_checkout_order",
+            orderNumber: createdOrder.order_number,
+            error: lookupError,
+          });
+          throw new Error(
+            `get_checkout_order failed: ${getErrorMessage(lookupError, "Unknown Supabase error")}`,
+          );
+        }
+
+        createdOrder = getCreatedOrder(recoveredOrder);
+      }
+
+      if (form.payment !== "cod" && !createdOrder?.id) {
+        console.error("[checkout] Secure order lookup returned no ID", {
+          orderNumber: createdOrder.order_number,
+          data: createdOrder,
+        });
+        throw new Error("Secure order lookup returned no ID");
       }
 
       if (form.payment !== "cod") {
@@ -366,12 +382,12 @@ export default function CheckoutPage() {
       clearCart();
       console.log("[checkout] Cart cleared");
       console.log("[checkout] Redirecting to order success");
-      navigate(`/order-success?order=${encodeURIComponent(createdOrder.order_number)}&phone=${encodeURIComponent(normalizedPhone)}&orderId=${encodeURIComponent(createdOrder.id)}`, {
+      navigate(`/order-success?order=${encodeURIComponent(createdOrder.order_number)}&phone=${encodeURIComponent(normalizedPhone)}${createdOrder.id ? `&orderId=${encodeURIComponent(createdOrder.id)}` : ""}`, {
         replace: true,
       });
     } catch (error) {
       console.error("[checkout] Order creation failed", error);
-      toast.error("We couldn't place your order. Please check your details and try again.");
+      toast.error(getErrorMessage(error, "Order creation failed."));
     } finally {
       console.log("[checkout] Resetting loading state");
       setLoading(false);

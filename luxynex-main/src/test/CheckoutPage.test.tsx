@@ -3,10 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import CheckoutPage from "../pages/CheckoutPage";
 
-const { mockNavigate, mockRpc, mockFrom, mockClearCart, mockToastError, mockToastSuccess } = vi.hoisted(() => ({
+const { mockNavigate, mockRpc, mockClearCart, mockToastError, mockToastSuccess } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockRpc: vi.fn(),
-  mockFrom: vi.fn(),
   mockClearCart: vi.fn(),
   mockToastError: vi.fn(),
   mockToastSuccess: vi.fn(),
@@ -69,7 +68,6 @@ vi.mock("@/contexts/AuthContext", () => ({
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: mockRpc,
-    from: mockFrom,
   },
 }));
 
@@ -86,13 +84,6 @@ describe("CheckoutPage", () => {
     mockRpc.mockResolvedValue({
       data: [{ id: "order-1", order_number: "LXV-12345" }],
       error: null,
-    });
-    mockFrom.mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })),
-      })),
     });
   });
 
@@ -209,7 +200,7 @@ describe("CheckoutPage", () => {
     });
   });
 
-  it("does not navigate when the backend omits the order ID", async () => {
+  it("completes COD checkout when production RPC returns only an order number", async () => {
     mockRpc.mockResolvedValueOnce({
       data: [{ order_number: "LXV-12345" }],
       error: null,
@@ -233,14 +224,15 @@ describe("CheckoutPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
       target: { value: "Dhaka" },
     });
+    fireEvent.click(screen.getByRole("button", { name: /cash on delivery/i }));
     fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
 
     await waitFor(() => {
-        expect(mockToastError).toHaveBeenCalledWith(
-          "We couldn't place your order. Please check your details and try again.",
-        );
+      expect(mockNavigate).toHaveBeenCalledWith(
+        "/order-success?order=LXV-12345&phone=01712345678",
+        { replace: true },
+      );
     });
-    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("accepts an object-shaped RPC response and redirects with its order ID", async () => {
@@ -282,15 +274,9 @@ describe("CheckoutPage", () => {
       data: [{ order_number: "LXV-24680" }],
       error: null,
     });
-    mockFrom.mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: { id: "recovered-order", order_number: "LXV-24680" },
-            error: null,
-          }),
-        })),
-      })),
+    mockRpc.mockResolvedValueOnce({
+      data: [{ id: "recovered-order", order_number: "LXV-24680" }],
+      error: null,
     });
 
     render(
@@ -319,6 +305,9 @@ describe("CheckoutPage", () => {
         expect.objectContaining({ replace: true }),
       );
     });
-    expect(mockFrom).toHaveBeenCalledWith("admin_orders");
+    expect(mockRpc).toHaveBeenLastCalledWith("get_checkout_order", {
+      p_customer_phone: "01712345678",
+      p_order_number: "LXV-24680",
+    });
   });
 });

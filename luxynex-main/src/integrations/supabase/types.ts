@@ -200,6 +200,7 @@ export type Database = {
           payment_type: string | null;
           sender_number: string | null;
           transaction_id: string | null;
+          user_id: string | null;
           shipping_address: string;
           shipping_fee: number;
           status: Database["public"]["Enums"]["order_status"];
@@ -225,6 +226,7 @@ export type Database = {
           payment_type?: string | null;
           sender_number?: string | null;
           transaction_id?: string | null;
+          user_id?: string | null;
           shipping_address: string;
           shipping_fee?: number;
           status?: Database["public"]["Enums"]["order_status"];
@@ -250,6 +252,7 @@ export type Database = {
           payment_type?: string | null;
           sender_number?: string | null;
           transaction_id?: string | null;
+          user_id?: string | null;
           shipping_address?: string;
           shipping_fee?: number;
           status?: Database["public"]["Enums"]["order_status"];
@@ -587,6 +590,19 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      validate_coupon_code: {
+        Args: { p_code: string; p_subtotal: number };
+        Returns: {
+          is_valid: boolean;
+          message: string;
+          coupon_id: string | null;
+          code: string | null;
+          discount_percent: number;
+          discount_amount: number;
+          min_order_amount: number;
+          final_discount_amount: number;
+        }[];
+      };
       get_order_tracking: {
         Args: { p_order_number: string; p_phone: string };
         Returns: {
@@ -598,6 +614,14 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"];
           total: number;
         }[];
+      };
+      get_checkout_order: {
+        Args: { p_customer_phone: string; p_order_number: string };
+        Returns: { id: string; order_number: string }[];
+      };
+      get_customer_orders: {
+        Args: Record<string, never>;
+        Returns: Database["public"]["Tables"]["admin_orders"]["Row"][];
       };
       has_role: {
         Args: {

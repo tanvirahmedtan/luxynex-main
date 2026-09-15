@@ -57,14 +57,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchDashboard = async () => {
       const [ordersRes, productsRes, customersRes, latestProductsRes] = await Promise.all([
-        supabase.from("admin_orders").select("id, total, status, created_at"),
+        supabase.from("admin_orders").select("*"),
         supabase.from("admin_products").select("id", { count: "exact", head: true }),
         supabase.from("admin_customers").select("id", { count: "exact", head: true }),
         supabase
           .from("admin_products")
-          .select(
-            "id, name, thumbnail, images, price, stock, category, is_active, created_at",
-          )
+          .select("*" )
           .order("created_at", { ascending: false })
           .limit(6),
       ]);

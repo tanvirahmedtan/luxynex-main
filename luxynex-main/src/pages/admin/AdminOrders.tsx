@@ -323,15 +323,15 @@ export default function AdminOrders() {
   const selectedSenderNumber =
     selected?.sender_number ||
     (selected?.payment_details && typeof selected.payment_details === "object" && !Array.isArray(selected.payment_details)
-      ? (selected.payment_details as Record<string, unknown>).sender_number
-      : null) ||
+      ? String((selected.payment_details as Record<string, unknown>).sender_number || "")
+      : "") ||
     "—";
 
   const selectedTransactionId =
     selected?.transaction_id ||
     (selected?.payment_details && typeof selected.payment_details === "object" && !Array.isArray(selected.payment_details)
-      ? (selected.payment_details as Record<string, unknown>).transaction_id
-      : null) ||
+      ? String((selected.payment_details as Record<string, unknown>).transaction_id || "")
+      : "") ||
     "—";
 
   const copyTransactionId = async () => {
