@@ -21,8 +21,8 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedVariant?: string | null;
-  selectedColor?: string | null;
-  selectedSize?: string | null;
+  selected_color?: string | null;
+  selected_size?: string | null;
 }
 
 export type PromoResult = {
@@ -94,13 +94,32 @@ const isCartItem = (value: unknown): value is CartItem => {
     (item.selectedVariant === undefined ||
       item.selectedVariant === null ||
       typeof item.selectedVariant === "string") &&
-    (item.selectedColor === undefined ||
-      item.selectedColor === null ||
-      typeof item.selectedColor === "string") &&
-    (item.selectedSize === undefined ||
-      item.selectedSize === null ||
-      typeof item.selectedSize === "string")
+    (item.selected_color === undefined ||
+      item.selected_color === null ||
+      typeof item.selected_color === "string") &&
+    (item.selected_size === undefined ||
+      item.selected_size === null ||
+      typeof item.selected_size === "string")
   );
+};
+
+const normalizeStoredCartItem = (value: unknown): CartItem | null => {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as CartItem & {
+    selectedColor?: string | null;
+    selectedSize?: string | null;
+  };
+  const { normalizedColor, normalizedSize } = parseVariantSelection(
+    raw.selectedVariant,
+    raw.selected_color ?? raw.selectedColor,
+    raw.selected_size ?? raw.selectedSize,
+  );
+  const normalized = {
+    ...raw,
+    selected_color: normalizedColor,
+    selected_size: normalizedSize,
+  };
+  return isCartItem(normalized) ? normalized : null;
 };
 
 const getUsageCount = (coupon: CouponRow) =>
@@ -190,7 +209,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.items)) {
-          setItems(parsed.items.filter(isCartItem));
+          setItems(parsed.items.map(normalizeStoredCartItem).filter((item): item is CartItem => item !== null));
         }
         if (typeof parsed.promoCode === "string") {
           setPromoCode(normalizeCouponCode(parsed.promoCode));
@@ -230,8 +249,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           (i) =>
             i.product.id === product.id &&
             (i.selectedVariant || null) === normalizedVariant &&
-            (i.selectedColor || null) === normalizedColor &&
-            (i.selectedSize || null) === normalizedSize,
+            (i.selected_color || null) === normalizedColor &&
+            (i.selected_size || null) === normalizedSize,
         );
 
         if (existingIndex > -1) {
@@ -248,8 +267,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             product,
             quantity: qty,
             selectedVariant: normalizedVariant,
-            selectedColor: normalizedColor,
-            selectedSize: normalizedSize,
+            selected_color: normalizedColor,
+            selected_size: normalizedSize,
           },
         ];
       });
@@ -269,8 +288,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
           (i) =>
             i.product.id !== id ||
             (i.selectedVariant || null) !== normalizedVariant ||
-            (i.selectedColor || null) !== normalizedColor ||
-            (i.selectedSize || null) !== normalizedSize,
+            (i.selected_color || null) !== normalizedColor ||
+            (i.selected_size || null) !== normalizedSize,
         );
       }),
     [],
@@ -287,8 +306,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         prev.map((i) =>
           i.product.id === id &&
           (i.selectedVariant || null) === normalizedVariant &&
-          (i.selectedColor || null) === normalizedColor &&
-          (i.selectedSize || null) === normalizedSize
+          (i.selected_color || null) === normalizedColor &&
+          (i.selected_size || null) === normalizedSize
             ? { ...i, quantity: qty }
             : i,
         ),

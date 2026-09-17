@@ -41,7 +41,9 @@ vi.mock("@/contexts/CartContext", async () => {
             colors: [],
           },
           quantity: 1,
-          selectedVariant: null,
+          selectedVariant: "Color: Black | Size: M",
+          selected_color: "Black",
+          selected_size: "M",
         },
       ],
       subtotal: 100,
@@ -164,6 +166,39 @@ describe("CheckoutPage", () => {
       expect(payload).not.toHaveProperty("p_city");
       expect(payload).not.toHaveProperty("p_delivery_zone");
       expect(payload).not.toHaveProperty("p_payment_type");
+    });
+  });
+
+  it("includes selected size and color in each place_order item", async () => {
+    render(
+      <MemoryRouter>
+        <CheckoutPage />
+      </MemoryRouter>,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your full name"), {
+      target: { value: "Test User" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("+880 1XXXXXXXXX"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("123, ABC Road, House #45"), {
+      target: { value: "123 Test Street" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter your city"), {
+      target: { value: "Dhaka" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /confirm order/i }));
+
+    await waitFor(() => {
+      const [, payload] = mockRpc.mock.calls.find(
+        ([rpcName]) => rpcName === "place_order",
+      ) as [string, { p_items: Array<Record<string, unknown>> }];
+
+      expect(payload.p_items[0]).toMatchObject({
+        selected_color: "Black",
+        selected_size: "M",
+      });
     });
   });
 

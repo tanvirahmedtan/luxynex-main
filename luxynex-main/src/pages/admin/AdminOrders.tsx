@@ -156,6 +156,54 @@ const getVariantInfo = (item: OrderItem) =>
     .filter(Boolean)
     .join(", ");
 
+const parseOrderItems = (rawItems: unknown): unknown[] => {
+  if (Array.isArray(rawItems)) return rawItems;
+  if (typeof rawItems === "string") {
+    try {
+      const parsed = JSON.parse(rawItems);
+      return Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === "object" && Array.isArray((parsed as any).items)
+          ? (parsed as any).items
+          : [];
+    } catch {
+      return [];
+    }
+  }
+
+  if (rawItems && typeof rawItems === "object") {
+    const obj = rawItems as Record<string, unknown>;
+    if (Array.isArray(obj.items)) return obj.items;
+    if (Array.isArray(obj.cart_items)) return obj.cart_items;
+  }
+
+  return [];
+};
+
+const mapOrderItem = (rawItem: unknown): OrderItem | null => {
+  if (!rawItem || typeof rawItem !== "object") return null;
+  const item = rawItem as Record<string, unknown>;
+  const variant = parseVariantText(item.selected_variant ?? item.variantInfo);
+
+  return {
+    name: String(item.name ?? item.product_name ?? "Unnamed item"),
+    price: Number(item.price ?? item.unit_price ?? 0),
+    quantity: Number(item.quantity ?? 1),
+    image: getCleanString(item.image ?? item.product_image),
+    color: getCleanString(item.color ?? item.selected_color) ?? variant.color,
+    size: getCleanString(item.size ?? item.selected_size) ?? variant.size,
+    sku: getCleanString(item.sku),
+    variantInfo: getCleanString(item.variantInfo ?? item.selected_variant),
+    product_id: getCleanString(item.product_id),
+    subtotal: Number(item.subtotal ?? 0),
+    selected_color: getCleanString(item.selected_color),
+    selected_size: getCleanString(item.selected_size),
+  };
+};
+
+const mapOrderItems = (rawItems: unknown) =>
+  parseOrderItems(rawItems).map(mapOrderItem).filter((item): item is OrderItem => item !== null);
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<Order | null>(null);
@@ -177,37 +225,40 @@ export default function AdminOrders() {
       return;
     }
 
-    const loadSelectedItems = async () => {
-      const { data, error } = await supabase
-        .from("order_items")
-        .select("*")
-        .eq("order_id", selected.id)
-        .order("created_at", { ascending: true });
+    const itemsFromJson = mapOrderItems(selected.items);
+    if (itemsFromJson.length > 0) {
+      setSelectedItems(itemsFromJson);
+      return;
+    }
 
-      if (error) {
-        console.error("Failed to load order items for admin view", error);
-        setSelectedItems([]);
-        return;
-      }
+    supabase
+      .from("order_items")
+      .select("*")
+      .eq("order_id", selected.id)
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to load legacy order items for admin view", error);
+          setSelectedItems([]);
+          return;
+        }
 
-      setSelectedItems(
-        (data || []).map((item) => ({
-          name: item.product_name,
-          price: Number(item.price ?? item.unit_price ?? 0),
-          quantity: Number(item.quantity ?? 1),
-          image: item.product_image ?? undefined,
-          color: item.selected_color ?? undefined,
-          size: item.selected_size ?? undefined,
-          sku: item.sku ?? undefined,
-          product_id: item.product_id ?? undefined,
-          subtotal: Number(item.subtotal ?? 0),
-          selected_color: item.selected_color ?? undefined,
-          selected_size: item.selected_size ?? undefined,
-        })),
-      );
-    };
-
-    loadSelectedItems();
+        setSelectedItems(
+          (data || []).map((item) => ({
+            name: item.product_name,
+            price: Number(item.price ?? item.unit_price ?? 0),
+            quantity: Number(item.quantity ?? 1),
+            image: item.product_image ?? undefined,
+            color: item.selected_color ?? undefined,
+            size: item.selected_size ?? undefined,
+            sku: item.sku ?? undefined,
+            product_id: item.product_id ?? undefined,
+            subtotal: Number(item.subtotal ?? 0),
+            selected_color: item.selected_color ?? undefined,
+            selected_size: item.selected_size ?? undefined,
+          })),
+        );
+      });
   }, [selected?.id]);
 
   useEffect(() => {
@@ -218,39 +269,6 @@ export default function AdminOrders() {
         "postgres_changes",
         { event: "*", schema: "public", table: "admin_orders" },
         () => fetchOrders(),
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "order_items" },
-        () => {
-          fetchOrders();
-          if (selected?.id) {
-            supabase
-              .from("order_items")
-              .select("*")
-              .eq("order_id", selected.id)
-              .order("created_at", { ascending: true })
-              .then(({ data, error }) => {
-                if (!error) {
-                  setSelectedItems(
-                    (data || []).map((item) => ({
-                      name: item.product_name,
-                      price: Number(item.price ?? item.unit_price ?? 0),
-                      quantity: Number(item.quantity ?? 1),
-                      image: item.product_image ?? undefined,
-                      color: item.selected_color ?? undefined,
-                      size: item.selected_size ?? undefined,
-                      sku: item.sku ?? undefined,
-                      product_id: item.product_id ?? undefined,
-                      subtotal: Number(item.subtotal ?? 0),
-                      selected_color: item.selected_color ?? undefined,
-                      selected_size: item.selected_size ?? undefined,
-                    })),
-                  );
-                }
-              });
-          }
-        },
       )
       .subscribe();
     return () => {
@@ -283,30 +301,6 @@ export default function AdminOrders() {
     toast.success("Order deleted");
     setSelected(null);
     fetchOrders();
-  };
-
-  const parseOrderItems = (rawItems: unknown): unknown[] => {
-    if (Array.isArray(rawItems)) return rawItems;
-    if (typeof rawItems === "string") {
-      try {
-        const parsed = JSON.parse(rawItems);
-        return Array.isArray(parsed)
-          ? parsed
-          : parsed && typeof parsed === "object" && Array.isArray((parsed as any).items)
-          ? (parsed as any).items
-          : [];
-      } catch {
-        return [];
-      }
-    }
-
-    if (rawItems && typeof rawItems === "object") {
-      const obj = rawItems as Record<string, unknown>;
-      if (Array.isArray(obj.items)) return obj.items;
-      if (Array.isArray(obj.cart_items)) return obj.cart_items;
-    }
-
-    return [];
   };
 
   const selectedPaymentMethodLabel =

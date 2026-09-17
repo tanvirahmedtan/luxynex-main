@@ -63,14 +63,14 @@ export default function CartPage() {
         </h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-3">
-            {items?.map(({ product: p, quantity, selectedVariant, selectedColor, selectedSize }) => {
+            {items?.map(({ product: p, quantity, selectedVariant, selected_color, selected_size }) => {
               const productId = p?.id ?? "";
               const productName = p?.name ?? "Cart item";
               const productPrice = Number(p?.price ?? 0);
               const productQuantity = Number(quantity ?? 0);
               const normalizedVariant = selectedVariant ?? null;
-              const normalizedColor = selectedColor ?? null;
-              const normalizedSize = selectedSize ?? null;
+              const normalizedColor = selected_color ?? null;
+              const normalizedSize = selected_size ?? null;
               const variantSummary = [normalizedColor, normalizedSize].filter(Boolean).join(" / ") || normalizedVariant;
               const itemKey = `${productId}-${normalizedVariant ?? "default"}-${normalizedColor ?? "default"}-${normalizedSize ?? "default"}-${productQuantity}`;
 

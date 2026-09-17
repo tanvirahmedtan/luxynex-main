@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { parseVariantSelection, useCart } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -227,32 +227,25 @@ export default function CheckoutPage() {
       const deliveryLabel =
         form.deliveryZone === "inside_dhaka" ? "Inside Dhaka" : "Outside Dhaka";
       const paymentLabel = form.payment === "cod" ? "Cash on Delivery" : "Online Payment";
+      const pItems = items.map((i) => ({
+        product_id: i.product.id,
+        quantity: i.quantity,
+        selected_size: i.selected_size ?? null,
+        selected_color: i.selected_color ?? null,
+        selected_variant: i.selectedVariant ?? null,
+        product_name: i.product.name,
+        unit_price: i.product.price,
+        subtotal: Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
+        product_image: i.product.image ?? null,
+        sku: i.product.sku ?? null,
+      }));
 
       const orderPayload = {
         p_customer_name: fullName,
         p_customer_phone: normalizedPhone,
         p_customer_email: user?.email || null,
         p_shipping_address: `${address}, ${city}`,
-        p_items: items.map((i) => {
-          const { normalizedColor, normalizedSize } = parseVariantSelection(
-            i.selectedVariant,
-            i.selectedColor,
-            i.selectedSize,
-          );
-
-          return {
-            product_id: i.product.id,
-            quantity: i.quantity,
-            selected_variant: i.selectedVariant ?? null,
-            selected_color: normalizedColor,
-            selected_size: normalizedSize,
-            product_name: i.product.name,
-            unit_price: i.product.price,
-            subtotal: Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
-            product_image: i.product.image ?? null,
-            sku: i.product.sku ?? null,
-          };
-        }),
+        p_items: pItems,
         p_shipping_fee: deliveryFee,
         p_promo_discount_percent:
           subtotal > 0 ? (appliedDiscountAmount / subtotal) * 100 : 0,
@@ -276,7 +269,9 @@ export default function CheckoutPage() {
           .join(" | "),
       };
 
-      console.log("[checkout] Creating order", orderPayload);
+      if (import.meta.env.DEV) {
+        console.log("[checkout] Final p_items payload", pItems);
+      }
       const { data, error } = (await supabase.rpc(
         "place_order",
         orderPayload,
@@ -327,26 +322,18 @@ export default function CheckoutPage() {
 
       if (form.payment !== "cod") {
         const pendingOrder: PendingOrderPayload = {
-          items: items.map((i) => {
-            const { normalizedColor, normalizedSize } = parseVariantSelection(
-              i.selectedVariant,
-              i.selectedColor,
-              i.selectedSize,
-            );
-
-            return {
-              product_id: i.product.id,
-              quantity: i.quantity,
-              price: i.product.price,
-              name: i.product.name,
-              selected_variant: i.selectedVariant ?? null,
-              selected_color: normalizedColor,
-              selected_size: normalizedSize,
-              product_image: i.product.image ?? null,
-              sku: i.product.sku ?? null,
-              subtotal: Number(i.product.price ?? 0) * Number(i.quantity ?? 0),
-            };
-          }),
+          items: pItems.map((item) => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.unit_price,
+            name: item.product_name,
+            selected_variant: item.selected_variant,
+            selected_color: item.selected_color,
+            selected_size: item.selected_size,
+            product_image: item.product_image,
+            sku: item.sku,
+            subtotal: item.subtotal,
+          })),
           customer_name: fullName,
           customer_phone: normalizedPhone,
           customer_email: user?.email || null,
